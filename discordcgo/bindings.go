@@ -736,3 +736,24 @@ func StoreManagerGetSkuAtGo(manager unsafe.Pointer, index int32) *DiscordSku {
 	}
 	return GetDiscordSku(ptr)
 }
+
+// Go-friendly StoreManager Entitlement helpers
+func StoreManagerGetEntitlementGo(manager unsafe.Pointer, entitlementID int64) *DiscordEntitlement {
+	ptr := MallocDiscordEntitlement()
+	defer Free(ptr)
+	res := StoreManagerGetEntitlement(manager, entitlementID, ptr)
+	if res != 0 {
+		return nil
+	}
+	return GetDiscordEntitlement(ptr)
+}
+
+func StoreManagerGetEntitlementAtGo(manager unsafe.Pointer, index int32) *DiscordEntitlement {
+	ptr := MallocDiscordEntitlement()
+	defer Free(ptr)
+	res := StoreManagerGetEntitlementAt(manager, index, ptr)
+	if res != 0 {
+		return nil
+	}
+	return GetDiscordEntitlement(ptr)
+}

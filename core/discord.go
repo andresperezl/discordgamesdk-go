@@ -563,13 +563,11 @@ func (s *StoreManager) GetEntitlement(entitlementID int64) (*Entitlement, Result
 	if s.manager == nil {
 		return nil, ResultInternalError
 	}
-	ptr := dcgo.MallocDiscordEntitlement()
-	defer dcgo.Free(ptr)
-	res := dcgo.StoreManagerGetEntitlement(s.manager, entitlementID, ptr)
-	if res != 0 {
-		return nil, Result(res)
+	ent := dcgo.StoreManagerGetEntitlementGo(s.manager, entitlementID)
+	if ent == nil {
+		return nil, ResultInternalError
 	}
-	return convertDiscordEntitlement(dcgo.GetDiscordEntitlement(ptr)), ResultOk
+	return convertDiscordEntitlement(ent), ResultOk
 }
 
 // GetEntitlementAt retrieves an entitlement by index
@@ -577,13 +575,11 @@ func (s *StoreManager) GetEntitlementAt(index int32) (*Entitlement, Result) {
 	if s.manager == nil {
 		return nil, ResultInternalError
 	}
-	ptr := dcgo.MallocDiscordEntitlement()
-	defer dcgo.Free(ptr)
-	res := dcgo.StoreManagerGetEntitlementAt(s.manager, index, ptr)
-	if res != 0 {
-		return nil, Result(res)
+	ent := dcgo.StoreManagerGetEntitlementAtGo(s.manager, index)
+	if ent == nil {
+		return nil, ResultInternalError
 	}
-	return convertDiscordEntitlement(dcgo.GetDiscordEntitlement(ptr)), ResultOk
+	return convertDiscordEntitlement(ent), ResultOk
 }
 
 // HasSkuEntitlement checks if a SKU has an entitlement
