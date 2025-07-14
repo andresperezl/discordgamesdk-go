@@ -77,9 +77,9 @@ func (o *OverlayManager) OpenGuildInvite(code string, callback func(result Resul
 		}
 		return
 	}
-
-	// For now, call the callback immediately since we don't have proper callback support
-	// TODO: Implement proper string conversion and C wrapper call
+	cCode := dcgo.GoStringToCChar(code)
+	defer dcgo.FreeCChar(cCode)
+	dcgo.OverlayManagerOpenGuildInvite(o.manager, cCode, nil, nil)
 	if callback != nil {
 		callback(ResultOk)
 	}
@@ -108,9 +108,7 @@ func (o *OverlayManager) InitDrawingDXGI(swapchain unsafe.Pointer, useMessageFor
 	if o.manager == nil {
 		return ResultInternalError
 	}
-
-	// NOTE: DXGI initialization not implemented in wrapper approach yet
-	return ResultInternalError
+	return Result(dcgo.OverlayManagerInitDrawingDXGI(o.manager, swapchain, useMessageForwarding))
 }
 
 // OnPresent handles present events
@@ -118,8 +116,7 @@ func (o *OverlayManager) OnPresent() {
 	if o.manager == nil {
 		return
 	}
-
-	// NOTE: Present handling not implemented in wrapper approach yet
+	dcgo.OverlayManagerOnPresent(o.manager)
 }
 
 // ForwardMessage forwards a message
@@ -127,8 +124,7 @@ func (o *OverlayManager) ForwardMessage(message unsafe.Pointer) {
 	if o.manager == nil {
 		return
 	}
-
-	// NOTE: Message forwarding not implemented in wrapper approach yet
+	dcgo.OverlayManagerForwardMessage(o.manager, message)
 }
 
 // KeyEvent handles key events
@@ -136,9 +132,9 @@ func (o *OverlayManager) KeyEvent(down bool, keyCode string, variant KeyVariant)
 	if o.manager == nil {
 		return
 	}
-
-	// NOTE: C.CString/C.free not needed, use Go string or []byte if needed by wrapper
-	// NOTE: Key event handling not implemented in wrapper approach yet
+	cKey := dcgo.GoStringToCChar(keyCode)
+	defer dcgo.FreeCChar(cKey)
+	dcgo.OverlayManagerKeyEvent(o.manager, down, cKey, int32(variant))
 }
 
 // CharEvent handles character events
@@ -146,9 +142,9 @@ func (o *OverlayManager) CharEvent(character string) {
 	if o.manager == nil {
 		return
 	}
-
-	// NOTE: C.CString/C.free not needed, use Go string or []byte if needed by wrapper
-	// NOTE: Char event handling not implemented in wrapper approach yet
+	cChar := dcgo.GoStringToCChar(character)
+	defer dcgo.FreeCChar(cChar)
+	dcgo.OverlayManagerCharEvent(o.manager, cChar)
 }
 
 // MouseButtonEvent handles mouse button events
@@ -156,8 +152,7 @@ func (o *OverlayManager) MouseButtonEvent(down uint8, clickCount int32, which Mo
 	if o.manager == nil {
 		return
 	}
-
-	// NOTE: Mouse button event handling not implemented in wrapper approach yet
+	dcgo.OverlayManagerMouseButtonEvent(o.manager, down, clickCount, int32(which), x, y)
 }
 
 // MouseMotionEvent handles mouse motion events
@@ -165,8 +160,7 @@ func (o *OverlayManager) MouseMotionEvent(x, y int32) {
 	if o.manager == nil {
 		return
 	}
-
-	// NOTE: Mouse motion event handling not implemented in wrapper approach yet
+	dcgo.OverlayManagerMouseMotionEvent(o.manager, x, y)
 }
 
 // IsPointInsideClickZone checks if a point is inside the click zone
@@ -174,7 +168,5 @@ func (o *OverlayManager) IsPointInsideClickZone(x, y int32) bool {
 	if o.manager == nil {
 		return false
 	}
-
-	// NOTE: Click zone checking not implemented in wrapper approach yet
-	return false
+	return dcgo.OverlayManagerIsPointInsideClickZone(o.manager, x, y)
 }

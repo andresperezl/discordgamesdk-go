@@ -92,4 +92,79 @@ void discord_overlay_manager_open_activity_invite(struct IDiscordOverlayManager*
 void discord_overlay_manager_open_guild_invite(struct IDiscordOverlayManager* manager, const char* code, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
 void discord_overlay_manager_open_voice_settings(struct IDiscordOverlayManager* manager, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
 
-#endif // DISCORD_WRAPPERS_H 
+// Store manager wrappers
+void discord_store_manager_fetch_skus(struct IDiscordStoreManager* manager, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_store_manager_count_skus(struct IDiscordStoreManager* manager, int32_t* count);
+enum EDiscordResult discord_store_manager_get_sku(struct IDiscordStoreManager* manager, DiscordSnowflake sku_id, struct DiscordSku* sku);
+enum EDiscordResult discord_store_manager_get_sku_at(struct IDiscordStoreManager* manager, int32_t index, struct DiscordSku* sku);
+void discord_store_manager_fetch_entitlements(struct IDiscordStoreManager* manager, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_store_manager_count_entitlements(struct IDiscordStoreManager* manager, int32_t* count);
+enum EDiscordResult discord_store_manager_get_entitlement(struct IDiscordStoreManager* manager, DiscordSnowflake entitlement_id, struct DiscordEntitlement* entitlement);
+enum EDiscordResult discord_store_manager_get_entitlement_at(struct IDiscordStoreManager* manager, int32_t index, struct DiscordEntitlement* entitlement);
+enum EDiscordResult discord_store_manager_has_sku_entitlement(struct IDiscordStoreManager* manager, DiscordSnowflake sku_id, bool* has_entitlement);
+void discord_store_manager_start_purchase(struct IDiscordStoreManager* manager, DiscordSnowflake sku_id, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+
+// Voice manager wrappers
+enum EDiscordResult discord_voice_manager_get_input_mode(struct IDiscordVoiceManager* manager, struct DiscordInputMode* input_mode);
+void discord_voice_manager_set_input_mode(struct IDiscordVoiceManager* manager, struct DiscordInputMode input_mode, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+enum EDiscordResult discord_voice_manager_is_self_mute(struct IDiscordVoiceManager* manager, bool* mute);
+enum EDiscordResult discord_voice_manager_set_self_mute(struct IDiscordVoiceManager* manager, bool mute);
+enum EDiscordResult discord_voice_manager_is_self_deaf(struct IDiscordVoiceManager* manager, bool* deaf);
+enum EDiscordResult discord_voice_manager_set_self_deaf(struct IDiscordVoiceManager* manager, bool deaf);
+enum EDiscordResult discord_voice_manager_is_local_mute(struct IDiscordVoiceManager* manager, DiscordSnowflake user_id, bool* mute);
+enum EDiscordResult discord_voice_manager_set_local_mute(struct IDiscordVoiceManager* manager, DiscordSnowflake user_id, bool mute);
+enum EDiscordResult discord_voice_manager_get_local_volume(struct IDiscordVoiceManager* manager, DiscordSnowflake user_id, uint8_t* volume);
+enum EDiscordResult discord_voice_manager_set_local_volume(struct IDiscordVoiceManager* manager, DiscordSnowflake user_id, uint8_t volume);
+
+// Achievement manager wrappers
+void discord_achievement_manager_set_user_achievement(struct IDiscordAchievementManager* manager, DiscordSnowflake achievement_id, uint8_t percent_complete, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_achievement_manager_fetch_user_achievements(struct IDiscordAchievementManager* manager, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_achievement_manager_count_user_achievements(struct IDiscordAchievementManager* manager, int32_t* count);
+enum EDiscordResult discord_achievement_manager_get_user_achievement(struct IDiscordAchievementManager* manager, DiscordSnowflake user_achievement_id, struct DiscordUserAchievement* user_achievement);
+enum EDiscordResult discord_achievement_manager_get_user_achievement_at(struct IDiscordAchievementManager* manager, int32_t index, struct DiscordUserAchievement* user_achievement);
+
+// Additional overlay manager wrappers
+enum EDiscordResult discord_overlay_manager_init_drawing_dxgi(struct IDiscordOverlayManager* manager, void* swapchain, bool use_message_forwarding);
+void discord_overlay_manager_on_present(struct IDiscordOverlayManager* manager);
+void discord_overlay_manager_forward_message(struct IDiscordOverlayManager* manager, void* message);
+void discord_overlay_manager_key_event(struct IDiscordOverlayManager* manager, bool down, const char* key_code, enum EDiscordKeyVariant variant);
+void discord_overlay_manager_char_event(struct IDiscordOverlayManager* manager, const char* character);
+void discord_overlay_manager_mouse_button_event(struct IDiscordOverlayManager* manager, uint8_t down, int32_t click_count, enum EDiscordMouseButton which, int32_t x, int32_t y);
+void discord_overlay_manager_mouse_motion_event(struct IDiscordOverlayManager* manager, int32_t x, int32_t y);
+void discord_overlay_manager_ime_commit_text(struct IDiscordOverlayManager* manager, const char* text);
+void discord_overlay_manager_ime_set_composition(struct IDiscordOverlayManager* manager, const char* text, struct DiscordImeUnderline* underlines, uint32_t underlines_length, int32_t from, int32_t to);
+void discord_overlay_manager_ime_cancel_composition(struct IDiscordOverlayManager* manager);
+void discord_overlay_manager_set_ime_composition_range_callback(struct IDiscordOverlayManager* manager, void* on_ime_composition_range_changed_data, void (*on_ime_composition_range_changed)(void* on_ime_composition_range_changed_data, int32_t from, int32_t to, struct DiscordRect* bounds, uint32_t bounds_length));
+void discord_overlay_manager_set_ime_selection_bounds_callback(struct IDiscordOverlayManager* manager, void* on_ime_selection_bounds_changed_data, void (*on_ime_selection_bounds_changed)(void* on_ime_selection_bounds_changed_data, struct DiscordRect anchor, struct DiscordRect focus, bool is_anchor_first));
+bool discord_overlay_manager_is_point_inside_click_zone(struct IDiscordOverlayManager* manager, int32_t x, int32_t y);
+
+// Additional lobby manager wrappers
+void discord_lobby_manager_update_lobby(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, struct IDiscordLobbyTransaction* transaction, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_lobby_manager_delete_lobby(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_lobby_manager_disconnect_lobby(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_lobby_manager_send_lobby_message(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, uint8_t* data, uint32_t data_length, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_lobby_manager_connect_voice(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_lobby_manager_disconnect_voice(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+enum EDiscordResult discord_lobby_manager_connect_network(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id);
+enum EDiscordResult discord_lobby_manager_disconnect_network(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id);
+enum EDiscordResult discord_lobby_manager_flush_network(struct IDiscordLobbyManager* manager);
+enum EDiscordResult discord_lobby_manager_open_network_channel(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, uint8_t channel_id, bool reliable);
+enum EDiscordResult discord_lobby_manager_send_network_message(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, uint8_t channel_id, uint8_t* data, uint32_t data_length);
+enum EDiscordResult discord_lobby_manager_get_lobby_update_transaction(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, struct IDiscordLobbyTransaction** transaction);
+enum EDiscordResult discord_lobby_transaction_set_type(struct IDiscordLobbyTransaction* transaction, enum EDiscordLobbyType type);
+enum EDiscordResult discord_lobby_transaction_set_owner(struct IDiscordLobbyTransaction* transaction, DiscordUserId owner_id);
+enum EDiscordResult discord_lobby_transaction_set_capacity(struct IDiscordLobbyTransaction* transaction, uint32_t capacity);
+enum EDiscordResult discord_lobby_transaction_set_metadata(struct IDiscordLobbyTransaction* transaction, DiscordMetadataKey key, DiscordMetadataValue value);
+enum EDiscordResult discord_lobby_transaction_delete_metadata(struct IDiscordLobbyTransaction* transaction, DiscordMetadataKey key);
+enum EDiscordResult discord_lobby_transaction_set_locked(struct IDiscordLobbyTransaction* transaction, bool locked);
+
+// Additional storage manager wrappers
+void discord_storage_manager_read_async_partial(struct IDiscordStorageManager* manager, const char* name, uint64_t offset, uint64_t length, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length));
+void discord_storage_manager_write_async(struct IDiscordStorageManager* manager, const char* name, uint8_t* data, uint32_t data_length, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+enum EDiscordResult discord_storage_manager_stat(struct IDiscordStorageManager* manager, const char* name, struct DiscordFileStat* stat);
+enum EDiscordResult discord_storage_manager_stat_at(struct IDiscordStorageManager* manager, int32_t index, struct DiscordFileStat* stat);
+enum EDiscordResult discord_storage_manager_get_path(struct IDiscordStorageManager* manager, DiscordPath* path);
+
+// Store manager wrappers 
+enum EDiscordResult discord_lobby_manager_get_lobby_activity_secret(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordLobbySecret* secret);
+#endif 

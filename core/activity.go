@@ -1,10 +1,5 @@
 package core
 
-/*
-#cgo CFLAGS: -I${SRCDIR}/lib
-#include <stdlib.h>
-*/
-import "C"
 import (
 	"time"
 	"unsafe"
@@ -28,10 +23,9 @@ func (a *ActivityManager) RegisterCommand(command string) Result {
 	if a.ptr == nil {
 		return ResultInternalError
 	}
-
-	// For now, return success since we don't have proper string conversion
-	// TODO: Implement proper string conversion and C wrapper call
-	return ResultOk
+	cCommand := dcgo.GoStringToCChar(command)
+	defer dcgo.FreeCChar(cCommand)
+	return Result(dcgo.ActivityManagerRegisterCommand(a.ptr, cCommand))
 }
 
 // RegisterSteam registers a Steam ID for the activity
@@ -231,24 +225,22 @@ func (a *ActivityManager) SendInvite(userID int64, actionType ActivityActionType
 		return
 	}
 
-	// Generate callback ID for tracking
 	callbackID := ""
 	if a.core != nil {
 		callbackID = a.core.GenerateCallbackID()
 	}
 
-	// For now, call the callback immediately since we don't have proper string conversion
-	// TODO: Implement proper string conversion and C wrapper call
+	cContent := dcgo.GoStringToCChar(content)
+	defer dcgo.FreeCChar(cContent)
+	dcgo.ActivityManagerSendInvite(a.ptr, userID, int32(actionType), cContent, nil, nil)
+
 	if callback != nil && a.core != nil && callbackID != "" {
-		// Wait for callback result with timeout
 		if result, found := a.core.WaitForCallbackResult(callbackID, 5*time.Second); found {
 			callback(result.Result)
 		} else {
-			// Fallback to immediate callback if tracking fails
 			callback(ResultOk)
 		}
 	} else if callback != nil {
-		// Fallback for immediate callback
 		callback(ResultOk)
 	}
 }

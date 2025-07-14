@@ -1,5 +1,10 @@
 package core
 
+/*
+#include <stdlib.h>
+*/
+import "C"
+
 import (
 	"unsafe"
 
@@ -36,10 +41,7 @@ func (n *NetworkManager) OpenPeer(peerID uint64, routeData string) Result {
 	if n.manager == nil {
 		return ResultInternalError
 	}
-
-	// For now, return success since we don't have proper string conversion
-	// TODO: Implement proper string conversion and C wrapper call
-	return ResultOk
+	return Result(dcgo.NetworkManagerOpenPeerHelper(n.manager, peerID, routeData))
 }
 
 // UpdatePeer updates the route data for a connected peer
@@ -47,10 +49,7 @@ func (n *NetworkManager) UpdatePeer(peerID uint64, routeData string) Result {
 	if n.manager == nil {
 		return ResultInternalError
 	}
-
-	// For now, return success since we don't have proper string conversion
-	// TODO: Implement proper string conversion and C wrapper call
-	return ResultOk
+	return Result(dcgo.NetworkManagerUpdatePeerHelper(n.manager, peerID, routeData))
 }
 
 // ClosePeer closes the connection to a remote peer

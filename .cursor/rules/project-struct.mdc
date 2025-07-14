@@ -1,0 +1,14 @@
+---
+description: Project Structure
+globs:
+alwaysApply: true
+---
+Remember the project structure is the following:
+- Under the lib/ directory you find the discord_game_sdk.h, that is the actual Discord Game SDK header file.
+- Under the discordcgo/ you find the discord_wrapper.h and discord_wrapper.c, which are the wrappers around the discord_game_sdk.h file. The bindings.go file have the actual Go bindings and any helper functions to translate between C types and Go types.
+- Under core/ you have the files that use the bindings and a somewhat C-like idiomatic functions to interact with the SDK.
+- In the root of the project (package discord) you have the more idiomatic Go functions and types that use the core package to invoke the SDK.
+- Only import C in the bindings.go file, any neccessary type conversion to C types must be done via helper methods provided by the bindings.go file itself, keep all the CGO code under the discordcgo package
+- When adding a function ensure the proper methods are added to the wrappers and bindings, then implement the more C like type functions in package core, and then implement the more idiomatic Go functions and types in the package discord (the root of the project)
+- Always make sure the code can compile after a series of changes
+- Once you are done commit the changes to Git, and disable gpg signing

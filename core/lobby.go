@@ -1,13 +1,10 @@
 package core
 
-/*
-#cgo CFLAGS: -I${SRCDIR}/lib
-*/
-import "C"
 import (
 	"unsafe"
 
 	"github.com/andresperezl/discordctl/discordcgo"
+	dcgo "github.com/andresperezl/discordctl/discordcgo"
 )
 
 // LobbyManager provides access to lobby-related functionality
@@ -317,10 +314,11 @@ func (t *LobbyTransaction) SetMetadata(key, value string) Result {
 	if t.transaction == nil {
 		return ResultInternalError
 	}
-
-	// For now, return success since we don't have proper string conversion
-	// TODO: Implement proper string conversion and C wrapper call
-	return ResultOk
+	cKey := dcgo.GoStringToCChar(key)
+	defer dcgo.FreeCChar(cKey)
+	cValue := dcgo.GoStringToCChar(value)
+	defer dcgo.FreeCChar(cValue)
+	return Result(discordcgo.LobbyTransactionSetMetadata(t.transaction, cKey, cValue))
 }
 
 // DeleteMetadata deletes lobby metadata
@@ -328,10 +326,9 @@ func (t *LobbyTransaction) DeleteMetadata(key string) Result {
 	if t.transaction == nil {
 		return ResultInternalError
 	}
-
-	// For now, return success since we don't have proper string conversion
-	// TODO: Implement proper string conversion and C wrapper call
-	return ResultOk
+	cKey := dcgo.GoStringToCChar(key)
+	defer dcgo.FreeCChar(cKey)
+	return Result(discordcgo.LobbyTransactionDeleteMetadata(t.transaction, cKey))
 }
 
 // SetLocked sets the lobby locked state

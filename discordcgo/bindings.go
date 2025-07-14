@@ -757,3 +757,7 @@ func StoreManagerGetEntitlementAtGo(manager unsafe.Pointer, index int32) *Discor
 	}
 	return GetDiscordEntitlement(ptr)
 }
+
+func LobbyManagerGetLobbyActivitySecret(manager unsafe.Pointer, lobbyID int64, secret unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_lobby_activity_secret((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.DiscordLobbySecret)(secret)))
+}
