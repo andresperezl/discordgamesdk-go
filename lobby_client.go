@@ -154,17 +154,6 @@ func (lc *LobbyClient) GetLobbyMetadataKeyByIndex(lobbyID int64, index int32) (s
 	return "", nil
 }
 
-// GetLobbyMetadataValueByIndex gets a lobby metadata value by index
-func (lc *LobbyClient) GetLobbyMetadataValueByIndex(lobbyID int64, index int32) (string, error) {
-	if lc.manager == nil {
-		return "", fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return empty string
-	return "", nil
-}
-
 // GetLobbyMemberCount gets the lobby member count
 func (lc *LobbyClient) GetLobbyMemberCount(lobbyID int64) (int32, error) {
 	if lc.manager == nil {
@@ -253,17 +242,6 @@ func (lc *LobbyClient) GetLobbyMemberMetadataKeyByIndex(lobbyID int64, userID in
 	return "", nil
 }
 
-// GetLobbyMemberMetadataValueByIndex gets a lobby member metadata value by index
-func (lc *LobbyClient) GetLobbyMemberMetadataValueByIndex(lobbyID int64, userID int64, index int32) (string, error) {
-	if lc.manager == nil {
-		return "", fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return empty string
-	return "", nil
-}
-
 // SendLobbyMessage sends a message to a lobby asynchronously and returns a channel for the result
 func (lc *LobbyClient) SendLobbyMessage(lobbyID int64, data []byte) <-chan error {
 	errChan := make(chan error, 1)
@@ -284,83 +262,6 @@ func (lc *LobbyClient) SendLobbyMessage(lobbyID int64, data []byte) <-chan error
 	})
 
 	return errChan
-}
-
-// GetLobbyMessageCount gets the lobby message count
-func (lc *LobbyClient) GetLobbyMessageCount(lobbyID int64) (int32, error) {
-	if lc.manager == nil {
-		return 0, fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
-}
-
-// GetLobbyMessageUserId gets a lobby message user ID
-func (lc *LobbyClient) GetLobbyMessageUserId(lobbyID int64, index int32) (int64, error) {
-	if lc.manager == nil {
-		return 0, fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
-}
-
-// GetLobbyMessageData gets lobby message data
-func (lc *LobbyClient) GetLobbyMessageData(lobbyID int64, index int32) ([]byte, error) {
-	if lc.manager == nil {
-		return nil, fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return empty data
-	return []byte{}, nil
-}
-
-// Search searches for lobbies
-func (lc *LobbyClient) Search(query string, filter string, distance core.LobbySearchDistance) error {
-	if lc.manager == nil {
-		return fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return success
-	return nil
-}
-
-// SearchWithFilter searches for lobbies with a filter
-func (lc *LobbyClient) SearchWithFilter(query string, filter string, distance core.LobbySearchDistance, comparison core.LobbySearchComparison, cast core.LobbySearchCast, value string) error {
-	if lc.manager == nil {
-		return fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return success
-	return nil
-}
-
-// GetSearchResultCount gets the search result count
-func (lc *LobbyClient) GetSearchResultCount() (int32, error) {
-	if lc.manager == nil {
-		return 0, fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
-}
-
-// GetSearchResult gets a search result
-func (lc *LobbyClient) GetSearchResult(index int32) (*core.Lobby, error) {
-	if lc.manager == nil {
-		return nil, fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return nil
-	return nil, nil
 }
 
 // DeleteLobby deletes a lobby asynchronously and returns a channel for the result
@@ -384,3 +285,9 @@ func (lc *LobbyClient) DeleteLobby(lobbyID int64) <-chan error {
 
 	return errChan
 }
+
+// NOTE: The Discord Game SDK does not provide APIs for lobby metadata value by index, lobby message history, or direct search result access.
+// Methods such as GetLobbyMetadataValueByIndex, GetLobbyMemberMetadataValueByIndex, GetLobbyMessageCount, GetLobbyMessageUserId, GetLobbyMessageData,
+// Search, SearchWithFilter, GetSearchResultCount, and GetSearchResult have been removed because they cannot be implemented with the current SDK.
+//
+// TODO: Methods like SetLobbyMetadata, DeleteLobbyMetadata, SetLobbyMemberMetadata, and DeleteLobbyMemberMetadata should be implemented using the transaction pattern.
