@@ -6,6 +6,10 @@ import (
 	core "github.com/andresperezl/discordctl/core"
 )
 
+// NOTE: The Discord Game SDK does not provide APIs to query open peers, channel counts, or message counts.
+// Methods such as IsPeerOpen, GetOpenPeerCount, GetOpenPeerId, GetChannelCount, GetChannelId, GetChannelMessageCount, GetChannelMessage, and ClearChannelMessages
+// have been removed because they cannot be implemented with the current SDK.
+
 // NetworkClient provides Go-like interfaces for network management
 type NetworkClient struct {
 	manager *core.NetworkManager
@@ -101,93 +105,5 @@ func (nc *NetworkClient) SendMessage(peerID uint64, channelID uint8, data []byte
 	if result != core.ResultOk {
 		return fmt.Errorf("failed to send message: %v", result)
 	}
-	return nil
-}
-
-// IsPeerOpen checks if a peer is open
-func (nc *NetworkClient) IsPeerOpen(userID int64) (bool, error) {
-	if nc.manager == nil {
-		return false, fmt.Errorf("network manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return false
-	return false, nil
-}
-
-// GetOpenPeerCount gets the open peer count
-func (nc *NetworkClient) GetOpenPeerCount() (int32, error) {
-	if nc.manager == nil {
-		return 0, fmt.Errorf("network manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
-}
-
-// GetOpenPeerId gets an open peer ID
-func (nc *NetworkClient) GetOpenPeerId(index int32) (int64, error) {
-	if nc.manager == nil {
-		return 0, fmt.Errorf("network manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
-}
-
-// GetChannelCount gets the channel count
-func (nc *NetworkClient) GetChannelCount(userID int64) (int32, error) {
-	if nc.manager == nil {
-		return 0, fmt.Errorf("network manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
-}
-
-// GetChannelId gets a channel ID
-func (nc *NetworkClient) GetChannelId(userID int64, index int32) (byte, error) {
-	if nc.manager == nil {
-		return 0, fmt.Errorf("network manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
-}
-
-// GetChannelMessageCount gets the channel message count
-func (nc *NetworkClient) GetChannelMessageCount(userID int64, channelID byte) (int32, error) {
-	if nc.manager == nil {
-		return 0, fmt.Errorf("network manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
-}
-
-// GetChannelMessage gets a channel message
-func (nc *NetworkClient) GetChannelMessage(userID int64, channelID byte, index int32) ([]byte, error) {
-	if nc.manager == nil {
-		return nil, fmt.Errorf("network manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return empty data
-	return []byte{}, nil
-}
-
-// ClearChannelMessages clears channel messages
-func (nc *NetworkClient) ClearChannelMessages(userID int64, channelID byte) error {
-	if nc.manager == nil {
-		return fmt.Errorf("network manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return success
 	return nil
 }
