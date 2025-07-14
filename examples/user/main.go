@@ -6,6 +6,7 @@ import (
 	"time"
 
 	discord "github.com/andresperezl/discordctl"
+	core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
 	fmt.Println("\n=== Checking User Flags ===")
 
 	// Check for Partner flag
-	hasPartner, err := userClient.CurrentUserHasFlag(discord.UserFlagPartner)
+	hasPartner, err := userClient.CurrentUserHasFlag(core.UserFlagPartner)
 	if err != nil {
 		fmt.Printf("⚠ Failed to check Partner flag: %v\n", err)
 	} else {
@@ -61,7 +62,7 @@ func main() {
 	}
 
 	// Check for HypeSquad Events flag
-	hasHypeSquadEvents, err := userClient.CurrentUserHasFlag(discord.UserFlagHypeSquadEvents)
+	hasHypeSquadEvents, err := userClient.CurrentUserHasFlag(core.UserFlagHypeSquadEvents)
 	if err != nil {
 		fmt.Printf("⚠ Failed to check HypeSquad Events flag: %v\n", err)
 	} else {
@@ -69,7 +70,7 @@ func main() {
 	}
 
 	// Check for HypeSquad House 1 flag
-	hasHypeSquadHouse1, err := userClient.CurrentUserHasFlag(discord.UserFlagHypeSquadHouse1)
+	hasHypeSquadHouse1, err := userClient.CurrentUserHasFlag(core.UserFlagHypeSquadHouse1)
 	if err != nil {
 		fmt.Printf("⚠ Failed to check HypeSquad House 1 flag: %v\n", err)
 	} else {
@@ -77,7 +78,7 @@ func main() {
 	}
 
 	// Check for HypeSquad House 2 flag
-	hasHypeSquadHouse2, err := userClient.CurrentUserHasFlag(discord.UserFlagHypeSquadHouse2)
+	hasHypeSquadHouse2, err := userClient.CurrentUserHasFlag(core.UserFlagHypeSquadHouse2)
 	if err != nil {
 		fmt.Printf("⚠ Failed to check HypeSquad House 2 flag: %v\n", err)
 	} else {
@@ -85,7 +86,7 @@ func main() {
 	}
 
 	// Check for HypeSquad House 3 flag
-	hasHypeSquadHouse3, err := userClient.CurrentUserHasFlag(discord.UserFlagHypeSquadHouse3)
+	hasHypeSquadHouse3, err := userClient.CurrentUserHasFlag(core.UserFlagHypeSquadHouse3)
 	if err != nil {
 		fmt.Printf("⚠ Failed to check HypeSquad House 3 flag: %v\n", err)
 	} else {

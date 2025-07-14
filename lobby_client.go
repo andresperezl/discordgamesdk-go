@@ -2,17 +2,19 @@ package discord
 
 import (
 	"fmt"
+
+	core "github.com/andresperezl/discordctl/core"
 )
 
 // LobbyClient provides Go-like interfaces for lobby management
 type LobbyClient struct {
-	manager *LobbyManager
-	core    *Core
+	manager *core.LobbyManager
+	core    *core.Core
 }
 
 // CreateLobby creates a lobby asynchronously and returns a channel for the result
-func (lc *LobbyClient) CreateLobby(transaction *LobbyTransaction) (<-chan *Lobby, <-chan error) {
-	lobbyChan := make(chan *Lobby, 1)
+func (lc *LobbyClient) CreateLobby(transaction *core.LobbyTransaction) (<-chan *core.Lobby, <-chan error) {
+	lobbyChan := make(chan *core.Lobby, 1)
 	errChan := make(chan error, 1)
 
 	if lc.manager == nil {
@@ -22,8 +24,8 @@ func (lc *LobbyClient) CreateLobby(transaction *LobbyTransaction) (<-chan *Lobby
 		return lobbyChan, errChan
 	}
 
-	lc.manager.CreateLobby(transaction, func(result Result, lobby *Lobby) {
-		if result != ResultOk {
+	lc.manager.CreateLobby(transaction, func(result core.Result, lobby *core.Lobby) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to create lobby: %v", result)
 			close(lobbyChan)
 			close(errChan)
@@ -38,8 +40,8 @@ func (lc *LobbyClient) CreateLobby(transaction *LobbyTransaction) (<-chan *Lobby
 }
 
 // ConnectLobby connects to a lobby asynchronously and returns a channel for the result
-func (lc *LobbyClient) ConnectLobby(lobbyID int64, secret string) (<-chan *Lobby, <-chan error) {
-	lobbyChan := make(chan *Lobby, 1)
+func (lc *LobbyClient) ConnectLobby(lobbyID int64, secret string) (<-chan *core.Lobby, <-chan error) {
+	lobbyChan := make(chan *core.Lobby, 1)
 	errChan := make(chan error, 1)
 
 	if lc.manager == nil {
@@ -49,8 +51,8 @@ func (lc *LobbyClient) ConnectLobby(lobbyID int64, secret string) (<-chan *Lobby
 		return lobbyChan, errChan
 	}
 
-	lc.manager.ConnectLobby(lobbyID, secret, func(result Result, lobby *Lobby) {
-		if result != ResultOk {
+	lc.manager.ConnectLobby(lobbyID, secret, func(result core.Result, lobby *core.Lobby) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to connect to lobby: %v", result)
 			close(lobbyChan)
 			close(errChan)
@@ -74,8 +76,8 @@ func (lc *LobbyClient) DisconnectLobby(lobbyID int64) <-chan error {
 		return errChan
 	}
 
-	lc.manager.DisconnectLobby(lobbyID, func(result Result) {
-		if result != ResultOk {
+	lc.manager.DisconnectLobby(lobbyID, func(result core.Result) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to disconnect from lobby: %v", result)
 		} else {
 			errChan <- nil
@@ -186,7 +188,7 @@ func (lc *LobbyClient) GetLobbyMemberUserId(lobbyID int64, index int32) (int64, 
 }
 
 // GetLobbyMemberUser gets a lobby member user
-func (lc *LobbyClient) GetLobbyMemberUser(lobbyID int64, userID int64) (*User, error) {
+func (lc *LobbyClient) GetLobbyMemberUser(lobbyID int64, userID int64) (*core.User, error) {
 	if lc.manager == nil {
 		return nil, fmt.Errorf("lobby manager not available")
 	}
@@ -272,8 +274,8 @@ func (lc *LobbyClient) SendLobbyMessage(lobbyID int64, data []byte) <-chan error
 		return errChan
 	}
 
-	lc.manager.SendLobbyMessage(lobbyID, data, func(result Result) {
-		if result != ResultOk {
+	lc.manager.SendLobbyMessage(lobbyID, data, func(result core.Result) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to send lobby message: %v", result)
 		} else {
 			errChan <- nil
@@ -318,7 +320,7 @@ func (lc *LobbyClient) GetLobbyMessageData(lobbyID int64, index int32) ([]byte, 
 }
 
 // Search searches for lobbies
-func (lc *LobbyClient) Search(query string, filter string, distance LobbySearchDistance) error {
+func (lc *LobbyClient) Search(query string, filter string, distance core.LobbySearchDistance) error {
 	if lc.manager == nil {
 		return fmt.Errorf("lobby manager not available")
 	}
@@ -329,7 +331,7 @@ func (lc *LobbyClient) Search(query string, filter string, distance LobbySearchD
 }
 
 // SearchWithFilter searches for lobbies with a filter
-func (lc *LobbyClient) SearchWithFilter(query string, filter string, distance LobbySearchDistance, comparison LobbySearchComparison, cast LobbySearchCast, value string) error {
+func (lc *LobbyClient) SearchWithFilter(query string, filter string, distance core.LobbySearchDistance, comparison core.LobbySearchComparison, cast core.LobbySearchCast, value string) error {
 	if lc.manager == nil {
 		return fmt.Errorf("lobby manager not available")
 	}
@@ -351,7 +353,7 @@ func (lc *LobbyClient) GetSearchResultCount() (int32, error) {
 }
 
 // GetSearchResult gets a search result
-func (lc *LobbyClient) GetSearchResult(index int32) (*Lobby, error) {
+func (lc *LobbyClient) GetSearchResult(index int32) (*core.Lobby, error) {
 	if lc.manager == nil {
 		return nil, fmt.Errorf("lobby manager not available")
 	}
@@ -371,8 +373,8 @@ func (lc *LobbyClient) DeleteLobby(lobbyID int64) <-chan error {
 		return errChan
 	}
 
-	lc.manager.DeleteLobby(lobbyID, func(result Result) {
-		if result != ResultOk {
+	lc.manager.DeleteLobby(lobbyID, func(result core.Result) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to delete lobby: %v", result)
 		} else {
 			errChan <- nil

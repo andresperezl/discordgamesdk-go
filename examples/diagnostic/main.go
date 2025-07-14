@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	discord "github.com/andresperezl/discordctl"
+	core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
@@ -16,20 +16,20 @@ func main() {
 	clientID := int64(1311711649018941501) // Replace with your actual client ID
 	fmt.Printf("Initializing Discord SDK with client ID: %d\n", clientID)
 
-	core, err := discord.Create(clientID, discord.CreateFlagsDefault, nil)
-	if err != discord.ResultOk {
+	coreObj, err := core.Create(clientID, core.CreateFlagsDefault, nil)
+	if err != core.ResultOk {
 		log.Fatalf("Failed to create Discord core: %v", err)
 	}
 	// Start the callback loop for robust event processing
-	core.Start()
-	defer core.Shutdown()
+	coreObj.Start()
+	defer coreObj.Shutdown()
 
 	fmt.Println("✓ Discord SDK initialized successfully")
 
 	// Wait for user info to become available (robust pattern)
 	fmt.Println("Waiting for user info...")
-	user, result := core.WaitForUser(5 * time.Second)
-	if result != discord.ResultOk {
+	user, result := coreObj.WaitForUser(5 * time.Second)
+	if result != core.ResultOk {
 		fmt.Printf("Warning: Failed to get current user: %v\n", result)
 		fmt.Println("  This might indicate Discord client issues or configuration problems")
 	} else {
@@ -38,7 +38,7 @@ func main() {
 
 	// Test 1: Application Manager
 	fmt.Println("\n--- Testing Application Manager ---")
-	appManager := core.GetApplicationManager()
+	appManager := coreObj.GetApplicationManager()
 	if appManager == nil {
 		fmt.Println("✗ Failed to get application manager")
 	} else {
@@ -53,7 +53,7 @@ func main() {
 
 	// Test 2: User Manager
 	fmt.Println("\n--- Testing User Manager ---")
-	userManager := core.GetUserManager()
+	userManager := coreObj.GetUserManager()
 	if userManager == nil {
 		fmt.Println("✗ Failed to get user manager")
 	} else {
@@ -62,7 +62,7 @@ func main() {
 		// Test current user retrieval
 		currentUser, result := userManager.GetCurrentUser()
 		fmt.Printf("Current user retrieval result: %v\n", result)
-		if result == discord.ResultOk {
+		if result == core.ResultOk {
 			fmt.Println("✓ Current user retrieved successfully")
 			fmt.Printf("  User ID: %d\n", currentUser.ID)
 			fmt.Printf("  Username: %s\n", currentUser.Username)
@@ -76,7 +76,7 @@ func main() {
 
 	// Test 3: Activity Manager
 	fmt.Println("\n--- Testing Activity Manager ---")
-	activityManager := core.GetActivityManager()
+	activityManager := coreObj.GetActivityManager()
 	if activityManager == nil {
 		fmt.Println("✗ Failed to get activity manager")
 	} else {
@@ -85,7 +85,7 @@ func main() {
 		// Test activity registration
 		result := activityManager.RegisterCommand("discordctl-diagnostic")
 		fmt.Printf("Activity registration result: %v\n", result)
-		if result == discord.ResultOk {
+		if result == core.ResultOk {
 			fmt.Println("✓ Activity manager registered successfully")
 		} else {
 			fmt.Printf("✗ Activity manager registration failed: %v\n", result)
@@ -94,7 +94,7 @@ func main() {
 
 	// Test 4: Storage Manager
 	fmt.Println("\n--- Testing Storage Manager ---")
-	storageManager := core.GetStorageManager()
+	storageManager := coreObj.GetStorageManager()
 	if storageManager == nil {
 		fmt.Println("✗ Failed to get storage manager")
 	} else {
@@ -104,14 +104,14 @@ func main() {
 		testData := []byte("diagnostic test data")
 		result := storageManager.Write("diagnostic_test", testData)
 		fmt.Printf("Storage write result: %v\n", result)
-		if result == discord.ResultOk {
+		if result == core.ResultOk {
 			fmt.Println("✓ Storage write successful")
 
 			// Test storage read
 			readData := make([]byte, len(testData))
 			bytesRead, result := storageManager.Read("diagnostic_test", readData)
 			fmt.Printf("Storage read result: %v (bytes read: %d)\n", result, bytesRead)
-			if result == discord.ResultOk {
+			if result == core.ResultOk {
 				fmt.Println("✓ Storage read successful")
 			} else {
 				fmt.Printf("✗ Storage read failed: %v\n", result)
@@ -120,7 +120,7 @@ func main() {
 			// Test storage delete
 			result = storageManager.Delete("diagnostic_test")
 			fmt.Printf("Storage delete result: %v\n", result)
-			if result == discord.ResultOk {
+			if result == core.ResultOk {
 				fmt.Println("✓ Storage delete successful")
 			} else {
 				fmt.Printf("✗ Storage delete failed: %v\n", result)

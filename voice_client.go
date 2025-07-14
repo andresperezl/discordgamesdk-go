@@ -2,16 +2,18 @@ package discord
 
 import (
 	"fmt"
+
+	core "github.com/andresperezl/discordctl/core"
 )
 
 // VoiceClient provides Go-like interfaces for voice management
 type VoiceClient struct {
-	manager *VoiceManager
-	core    *Core
+	manager *core.VoiceManager
+	core    *core.Core
 }
 
 // SetInputMode sets the input mode
-func (vc *VoiceClient) SetInputMode(mode InputMode) error {
+func (vc *VoiceClient) SetInputMode(mode core.InputMode) error {
 	if vc.manager == nil {
 		return fmt.Errorf("voice manager not available")
 	}
@@ -22,14 +24,14 @@ func (vc *VoiceClient) SetInputMode(mode InputMode) error {
 }
 
 // GetInputMode gets the input mode
-func (vc *VoiceClient) GetInputMode() (InputMode, error) {
+func (vc *VoiceClient) GetInputMode() (core.InputMode, error) {
 	if vc.manager == nil {
-		return InputMode{}, fmt.Errorf("voice manager not available")
+		return core.InputMode{}, fmt.Errorf("voice manager not available")
 	}
 
 	// This would need to be implemented in the C wrapper
 	// For now, return default
-	return InputMode{}, nil
+	return core.InputMode{}, nil
 }
 
 // IsSelfMute checks if self-mute is enabled

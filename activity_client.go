@@ -3,16 +3,18 @@ package discord
 import (
 	"fmt"
 	"time"
+
+	core "github.com/andresperezl/discordctl/core"
 )
 
 // ActivityClient provides Go-like interfaces for activity management
 type ActivityClient struct {
-	manager *ActivityManager
-	core    *Core
+	manager *core.ActivityManager
+	core    *core.Core
 }
 
 // SetActivity sets the current activity with Go-like error handling
-func (ac *ActivityClient) SetActivity(activity *Activity) error {
+func (ac *ActivityClient) SetActivity(activity *core.Activity) error {
 	if ac.manager == nil {
 		return fmt.Errorf("activity manager not available")
 	}
@@ -21,7 +23,7 @@ func (ac *ActivityClient) SetActivity(activity *Activity) error {
 
 	select {
 	case result := <-resultChan:
-		if result != ResultOk {
+		if result != core.ResultOk {
 			return fmt.Errorf("failed to set activity: %v", result)
 		}
 		return nil
@@ -31,7 +33,7 @@ func (ac *ActivityClient) SetActivity(activity *Activity) error {
 }
 
 // SetActivityWithCallback sets the current activity with a callback
-func (ac *ActivityClient) SetActivityWithCallback(activity *Activity, callback func(error)) {
+func (ac *ActivityClient) SetActivityWithCallback(activity *core.Activity, callback func(error)) {
 	if ac.manager == nil {
 		if callback != nil {
 			callback(fmt.Errorf("activity manager not available"))
@@ -39,9 +41,9 @@ func (ac *ActivityClient) SetActivityWithCallback(activity *Activity, callback f
 		return
 	}
 
-	ac.manager.UpdateActivity(activity, func(result Result) {
+	ac.manager.UpdateActivity(activity, func(result core.Result) {
 		if callback != nil {
-			if result != ResultOk {
+			if result != core.ResultOk {
 				callback(fmt.Errorf("failed to set activity: %v", result))
 			} else {
 				callback(nil)
@@ -60,7 +62,7 @@ func (ac *ActivityClient) ClearActivity() error {
 
 	select {
 	case result := <-resultChan:
-		if result != ResultOk {
+		if result != core.ResultOk {
 			return fmt.Errorf("failed to clear activity: %v", result)
 		}
 		return nil
@@ -78,9 +80,9 @@ func (ac *ActivityClient) ClearActivityWithCallback(callback func(error)) {
 		return
 	}
 
-	ac.manager.ClearActivity(func(result Result) {
+	ac.manager.ClearActivity(func(result core.Result) {
 		if callback != nil {
-			if result != ResultOk {
+			if result != core.ResultOk {
 				callback(fmt.Errorf("failed to clear activity: %v", result))
 			} else {
 				callback(nil)
@@ -90,22 +92,22 @@ func (ac *ActivityClient) ClearActivityWithCallback(callback func(error)) {
 }
 
 // SendRequestReply sends a reply to a join request with Go-like error handling
-func (ac *ActivityClient) SendRequestReply(userID int64, reply ActivityJoinRequestReply) error {
+func (ac *ActivityClient) SendRequestReply(userID int64, reply core.ActivityJoinRequestReply) error {
 	if ac.manager == nil {
 		return fmt.Errorf("activity manager not available")
 	}
 
 	// Create a channel to receive the result
-	resultChan := make(chan Result, 1)
+	resultChan := make(chan core.Result, 1)
 
-	ac.manager.SendRequestReply(userID, reply, func(result Result) {
+	ac.manager.SendRequestReply(userID, reply, func(result core.Result) {
 		resultChan <- result
 		close(resultChan)
 	})
 
 	select {
 	case result := <-resultChan:
-		if result != ResultOk {
+		if result != core.ResultOk {
 			return fmt.Errorf("failed to send request reply: %v", result)
 		}
 		return nil
@@ -115,22 +117,22 @@ func (ac *ActivityClient) SendRequestReply(userID int64, reply ActivityJoinReque
 }
 
 // SendInvite sends an invite to a user with Go-like error handling
-func (ac *ActivityClient) SendInvite(userID int64, actionType ActivityActionType, content string) error {
+func (ac *ActivityClient) SendInvite(userID int64, actionType core.ActivityActionType, content string) error {
 	if ac.manager == nil {
 		return fmt.Errorf("activity manager not available")
 	}
 
 	// Create a channel to receive the result
-	resultChan := make(chan Result, 1)
+	resultChan := make(chan core.Result, 1)
 
-	ac.manager.SendInvite(userID, actionType, content, func(result Result) {
+	ac.manager.SendInvite(userID, actionType, content, func(result core.Result) {
 		resultChan <- result
 		close(resultChan)
 	})
 
 	select {
 	case result := <-resultChan:
-		if result != ResultOk {
+		if result != core.ResultOk {
 			return fmt.Errorf("failed to send invite: %v", result)
 		}
 		return nil
@@ -146,16 +148,16 @@ func (ac *ActivityClient) AcceptInvite(userID int64) error {
 	}
 
 	// Create a channel to receive the result
-	resultChan := make(chan Result, 1)
+	resultChan := make(chan core.Result, 1)
 
-	ac.manager.AcceptInvite(userID, func(result Result) {
+	ac.manager.AcceptInvite(userID, func(result core.Result) {
 		resultChan <- result
 		close(resultChan)
 	})
 
 	select {
 	case result := <-resultChan:
-		if result != ResultOk {
+		if result != core.ResultOk {
 			return fmt.Errorf("failed to accept invite: %v", result)
 		}
 		return nil
@@ -171,7 +173,7 @@ func (ac *ActivityClient) RegisterCommand(command string) error {
 	}
 
 	result := ac.manager.RegisterCommand(command)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to register command: %v", result)
 	}
 
@@ -185,7 +187,7 @@ func (ac *ActivityClient) RegisterSteam(steamID uint32) error {
 	}
 
 	result := ac.manager.RegisterSteam(steamID)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to register Steam ID: %v", result)
 	}
 
@@ -194,18 +196,18 @@ func (ac *ActivityClient) RegisterSteam(steamID uint32) error {
 
 // ActivityBuilder helps build activities with a fluent interface
 type ActivityBuilder struct {
-	activity *Activity
+	activity *core.Activity
 }
 
 // NewActivity creates a new activity builder
 func NewActivity() *ActivityBuilder {
 	return &ActivityBuilder{
-		activity: &Activity{},
+		activity: &core.Activity{},
 	}
 }
 
 // SetType sets the activity type
-func (ab *ActivityBuilder) SetType(activityType ActivityType) *ActivityBuilder {
+func (ab *ActivityBuilder) SetType(activityType core.ActivityType) *ActivityBuilder {
 	ab.activity.Type = activityType
 	return ab
 }
@@ -236,29 +238,21 @@ func (ab *ActivityBuilder) SetDetails(details string) *ActivityBuilder {
 
 // SetTimestamps sets the activity timestamps
 func (ab *ActivityBuilder) SetTimestamps(start, end int64) *ActivityBuilder {
-	ab.activity.Timestamps = ActivityTimestamps{
-		Start: start,
-		End:   end,
-	}
+	ab.activity.Timestamps = core.ActivityTimestamps{Start: start, End: end}
 	return ab
 }
 
 // SetAssets sets the activity assets
-func (ab *ActivityBuilder) SetAssets(largeImage, largeText, smallImage, smallText string) *ActivityBuilder {
-	ab.activity.Assets = ActivityAssets{
-		LargeImage: largeImage,
-		LargeText:  largeText,
-		SmallImage: smallImage,
-		SmallText:  smallText,
-	}
+func (ab *ActivityBuilder) SetAssets(assets core.ActivityAssets) *ActivityBuilder {
+	ab.activity.Assets = assets
 	return ab
 }
 
 // SetParty sets the activity party
-func (ab *ActivityBuilder) SetParty(id string, currentSize, maxSize int32, privacy ActivityPartyPrivacy) *ActivityBuilder {
-	ab.activity.Party = ActivityParty{
+func (ab *ActivityBuilder) SetParty(id string, currentSize, maxSize int32, privacy core.ActivityPartyPrivacy) *ActivityBuilder {
+	ab.activity.Party = core.ActivityParty{
 		ID: id,
-		Size: PartySize{
+		Size: core.PartySize{
 			CurrentSize: currentSize,
 			MaxSize:     maxSize,
 		},
@@ -269,7 +263,7 @@ func (ab *ActivityBuilder) SetParty(id string, currentSize, maxSize int32, priva
 
 // SetSecrets sets the activity secrets
 func (ab *ActivityBuilder) SetSecrets(match, join, spectate string) *ActivityBuilder {
-	ab.activity.Secrets = ActivitySecrets{
+	ab.activity.Secrets = core.ActivitySecrets{
 		Match:    match,
 		Join:     join,
 		Spectate: spectate,
@@ -290,6 +284,6 @@ func (ab *ActivityBuilder) SetSupportedPlatforms(platforms uint32) *ActivityBuil
 }
 
 // Build returns the built activity
-func (ab *ActivityBuilder) Build() *Activity {
+func (ab *ActivityBuilder) Build() *core.Activity {
 	return ab.activity
 }

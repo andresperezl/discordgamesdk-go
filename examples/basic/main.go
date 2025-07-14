@@ -6,6 +6,7 @@ import (
 	"time"
 
 	discord "github.com/andresperezl/discordctl"
+	core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
@@ -42,7 +43,7 @@ func main() {
 
 	// Create an activity using the builder pattern
 	activity := discord.NewActivity().
-		SetType(discord.ActivityTypePlaying).
+		SetType(core.ActivityTypePlaying).
 		SetApplicationID(clientID).
 		SetName("Discord Go SDK").
 		SetState("Testing New Client").

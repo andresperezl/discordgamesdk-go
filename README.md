@@ -53,17 +53,18 @@ package main
 import (
     "log"
     "github.com/andresperezl/discordctl"
+    core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
     // Initialize the Discord SDK
     clientID := int64(1234567890123456789) // Your Discord application ID
-    core, err := discord.Create(clientID, discord.CreateFlagsDefault, nil)
-    if err != discord.ResultOk {
+    coreObj, err := discord.Create(clientID, core.CreateFlagsDefault, nil)
+    if err != core.ResultOk {
         log.Fatalf("Failed to create Discord core: %v", err)
     }
-    core.Start()
-    defer core.Shutdown()
+    coreObj.Start()
+    defer coreObj.Shutdown()
 
     // Get managers
     appManager := core.GetApplicationManager()
@@ -73,7 +74,7 @@ func main() {
     // Run the main loop
     for {
         result := core.RunCallbacks()
-        if result != discord.ResultOk {
+        if result != core.ResultOk {
             log.Printf("RunCallbacks returned: %v", result)
         }
         
@@ -101,7 +102,7 @@ This wrapper provides a robust pattern:
 - **Wait for user info:**
   ```go
   user, result := core.WaitForUser(5 * time.Second)
-  if result != discord.ResultOk {
+  if result != core.ResultOk {
       log.Fatalf("Failed to get current user: %v", result)
   }
   ```

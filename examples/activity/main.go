@@ -6,6 +6,7 @@ import (
 	"time"
 
 	discord "github.com/andresperezl/discordctl"
+	core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
@@ -39,14 +40,14 @@ func main() {
 	fmt.Println("\n=== Creating Rich Activity ===")
 
 	activity := discord.NewActivity().
-		SetType(discord.ActivityTypePlaying).
+		SetType(core.ActivityTypePlaying).
 		SetApplicationID(clientID).
 		SetName("Discord Go SDK").
 		SetState("Testing Activity Builder").
 		SetDetails("Building activities with Go-like interfaces").
 		SetTimestamps(time.Now().Unix(), time.Now().Add(3600).Unix()).
-		SetAssets("large_image_key", "Playing Discord Go SDK", "small_image_key", "Go Language").
-		SetParty("party_id_123", 1, 4, discord.ActivityPartyPrivacyPublic).
+		SetAssets(core.ActivityAssets{LargeImage: "large_image_key", LargeText: "Playing Discord Go SDK", SmallImage: "small_image_key", SmallText: "Go Language"}).
+		SetParty("party_id_123", 1, 4, core.ActivityPartyPrivacyPublic).
 		SetSecrets("match_secret", "join_secret", "spectate_secret").
 		SetInstance(true).
 		Build()
@@ -66,7 +67,7 @@ func main() {
 	fmt.Println("\n=== Updating Activity ===")
 
 	updatedActivity := discord.NewActivity().
-		SetType(discord.ActivityTypePlaying).
+		SetType(core.ActivityTypePlaying).
 		SetApplicationID(clientID).
 		SetName("Discord Go SDK").
 		SetState("Activity Updated!").
@@ -118,7 +119,7 @@ func main() {
 
 	// Listening activity
 	listeningActivity := discord.NewActivity().
-		SetType(discord.ActivityTypeListening).
+		SetType(core.ActivityTypeListening).
 		SetApplicationID(clientID).
 		SetName("Spotify").
 		SetState("Listening to music").
@@ -137,7 +138,7 @@ func main() {
 
 	// Streaming activity
 	streamingActivity := discord.NewActivity().
-		SetType(discord.ActivityTypeStreaming).
+		SetType(core.ActivityTypeStreaming).
 		SetApplicationID(clientID).
 		SetName("Twitch").
 		SetState("Live on Twitch").
@@ -156,7 +157,7 @@ func main() {
 
 	// Watching activity
 	watchingActivity := discord.NewActivity().
-		SetType(discord.ActivityTypeWatching).
+		SetType(core.ActivityTypeWatching).
 		SetApplicationID(clientID).
 		SetName("YouTube").
 		SetState("Watching videos").

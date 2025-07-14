@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	discord "github.com/andresperezl/discordctl"
+	core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
@@ -16,21 +16,21 @@ func main() {
 	clientID := int64(1311711649018941501)
 	fmt.Printf("Initializing Discord SDK with client ID: %d\n", clientID)
 
-	core, err := discord.Create(clientID, discord.CreateFlagsDefault, nil)
-	if err != discord.ResultOk {
+	coreObj, err := core.Create(clientID, core.CreateFlagsDefault, nil)
+	if err != core.ResultOk {
 		log.Fatalf("Failed to create Discord core: %v", err)
 	}
 
 	// Start the callback loop
 	fmt.Println("Starting callback loop...")
-	core.Start()
-	defer core.Shutdown()
+	coreObj.Start()
+	defer coreObj.Shutdown()
 
 	// Test 1: Wait for initialization
 	fmt.Println("\n=== Test 1: Initialization Waiting ===")
 	fmt.Println("Waiting for SDK initialization...")
 	startTime := time.Now()
-	if !core.WaitForInitialization(5 * time.Second) {
+	if !coreObj.WaitForInitialization(5 * time.Second) {
 		log.Fatal("Failed to initialize Discord SDK within timeout")
 	}
 	initTime := time.Since(startTime)
@@ -40,8 +40,8 @@ func main() {
 	fmt.Println("\n=== Test 2: User Connection Waiting ===")
 	fmt.Println("Waiting for user connection...")
 	userStartTime := time.Now()
-	user, result := core.WaitForUser(5 * time.Second)
-	if result != discord.ResultOk {
+	user, result := coreObj.WaitForUser(5 * time.Second)
+	if result != core.ResultOk {
 		log.Fatalf("Failed to get current user: %v", result)
 	}
 	userTime := time.Since(userStartTime)
@@ -50,7 +50,7 @@ func main() {
 	// Test 3: Get managers with core reference
 	fmt.Println("\n=== Test 3: Manager Access with Core Reference ===")
 
-	activityManager := core.GetActivityManager()
+	activityManager := coreObj.GetActivityManager()
 	if activityManager == nil {
 		log.Fatal("Failed to get activity manager")
 	}
@@ -60,14 +60,14 @@ func main() {
 	fmt.Println("\n=== Test 4: Callback Result Tracking ===")
 
 	// Generate a callback ID
-	callbackID := core.GenerateCallbackID()
+	callbackID := coreObj.GenerateCallbackID()
 	fmt.Printf("Generated callback ID: %s\n", callbackID)
 
 	// Add a test callback result
-	core.AddCallbackResult(callbackID, discord.ResultOk, "test_data")
+	coreObj.AddCallbackResult(callbackID, core.ResultOk, "test_data")
 
 	// Retrieve the callback result
-	if result, found := core.GetCallbackResult(callbackID); found {
+	if result, found := coreObj.GetCallbackResult(callbackID); found {
 		fmt.Printf("✓ Retrieved callback result: %v\n", result)
 	} else {
 		fmt.Println("✗ Failed to retrieve callback result")
@@ -77,45 +77,27 @@ func main() {
 	fmt.Println("\n=== Test 5: Async Activity Operations ===")
 
 	// Create a test activity
-	activity := &discord.Activity{
-		Type:          discord.ActivityTypePlaying,
+	activity := core.Activity{
+		Type:          core.ActivityTypePlaying,
 		ApplicationID: clientID,
-		Name:          "Discord Go SDK",
+		Name:          "Callback Test Activity",
 		State:         "Testing Callbacks",
-		Details:       "Enhanced callback handling demo",
-		Timestamps: discord.ActivityTimestamps{
-			Start: time.Now().Unix(),
-		},
-		Assets: discord.ActivityAssets{
-			LargeImage: "logo",
-			LargeText:  "Discord Go SDK",
-			SmallImage: "go",
-			SmallText:  "Go Language",
-		},
-		Party: discord.ActivityParty{
-			Size: discord.PartySize{
-				CurrentSize: 1,
-				MaxSize:     4,
-			},
-			Privacy: discord.ActivityPartyPrivacyPublic,
-		},
-		Secrets: discord.ActivitySecrets{
-			Match:    "secret-match",
-			Join:     "secret-join",
-			Spectate: "secret-spectate",
-		},
-		Instance: true,
+		Details:       "Callback Test Details",
+		Timestamps:    core.ActivityTimestamps{Start: time.Now().Unix(), End: time.Now().Add(3600 * time.Second).Unix()},
+		Assets:        core.ActivityAssets{LargeImage: "large_image_key", LargeText: "Large Text", SmallImage: "small_image_key", SmallText: "Small Text"},
+		Party:         core.ActivityParty{ID: "party_id", Size: core.PartySize{CurrentSize: 1, MaxSize: 4}, Privacy: core.ActivityPartyPrivacyPublic},
+		Instance:      true,
 	}
 
 	// Test async activity update
 	fmt.Println("Testing async activity update...")
 	updateStartTime := time.Now()
-	updateChan := activityManager.UpdateActivityAsync(activity)
+	updateChan := activityManager.UpdateActivityAsync(&activity)
 
 	select {
 	case result := <-updateChan:
 		updateTime := time.Since(updateStartTime)
-		if result == discord.ResultOk {
+		if result == core.ResultOk {
 			fmt.Printf("✓ Async activity update completed successfully in %v\n", updateTime)
 		} else {
 			fmt.Printf("⚠ Async activity update failed: %v in %v\n", result, updateTime)
@@ -132,7 +114,7 @@ func main() {
 	select {
 	case result := <-clearChan:
 		clearTime := time.Since(clearStartTime)
-		if result == discord.ResultOk {
+		if result == core.ResultOk {
 			fmt.Printf("✓ Async activity clear completed successfully in %v\n", clearTime)
 		} else {
 			fmt.Printf("⚠ Async activity clear failed: %v in %v\n", result, clearTime)
@@ -145,17 +127,17 @@ func main() {
 	fmt.Println("\n=== Test 6: Wait for Callback Result ===")
 
 	// Create a test callback ID
-	testCallbackID := core.GenerateCallbackID()
+	testCallbackID := coreObj.GenerateCallbackID()
 	fmt.Printf("Testing wait for callback ID: %s\n", testCallbackID)
 
 	// Simulate a callback result after a delay
 	go func() {
 		time.Sleep(1 * time.Second)
-		core.AddCallbackResult(testCallbackID, discord.ResultOk, "delayed_data")
+		coreObj.AddCallbackResult(testCallbackID, core.ResultOk, "delayed_data")
 	}()
 
 	// Wait for the callback result
-	if result, found := core.WaitForCallbackResult(testCallbackID, 3*time.Second); found {
+	if result, found := coreObj.WaitForCallbackResult(testCallbackID, 3*time.Second); found {
 		fmt.Printf("✓ Successfully waited for callback result: %v\n", result)
 	} else {
 		fmt.Println("✗ Failed to wait for callback result")
@@ -165,16 +147,16 @@ func main() {
 	fmt.Println("\n=== Test 7: Multiple Concurrent Operations ===")
 
 	// Start multiple async operations
-	operations := []chan discord.Result{}
+	operations := []chan core.Result{}
 
 	for i := 0; i < 3; i++ {
-		opChan := activityManager.UpdateActivityAsync(&discord.Activity{
-			Type:          discord.ActivityTypePlaying,
+		opChan := activityManager.UpdateActivityAsync(&core.Activity{
+			Type:          core.ActivityTypePlaying,
 			ApplicationID: clientID,
 			Name:          fmt.Sprintf("Concurrent Test %d", i+1),
 			State:         "Testing concurrent operations",
 			Details:       fmt.Sprintf("Operation %d", i+1),
-			Timestamps: discord.ActivityTimestamps{
+			Timestamps: core.ActivityTimestamps{
 				Start: time.Now().Unix(),
 			},
 		})
@@ -186,7 +168,7 @@ func main() {
 	for i, opChan := range operations {
 		select {
 		case result := <-opChan:
-			if result == discord.ResultOk {
+			if result == core.ResultOk {
 				fmt.Printf("✓ Concurrent operation %d completed successfully\n", i+1)
 				completed++
 			} else {
@@ -204,7 +186,7 @@ func main() {
 	finalClearChan := activityManager.ClearActivityAsync()
 	select {
 	case result := <-finalClearChan:
-		if result == discord.ResultOk {
+		if result == core.ResultOk {
 			fmt.Println("✓ Final activity clear completed")
 		} else {
 			fmt.Printf("⚠ Final activity clear failed: %v\n", result)

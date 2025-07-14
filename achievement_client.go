@@ -2,12 +2,14 @@ package discord
 
 import (
 	"fmt"
+
+	core "github.com/andresperezl/discordctl/core"
 )
 
 // AchievementClient provides Go-like interfaces for achievement management
 type AchievementClient struct {
-	manager *AchievementManager
-	core    *Core
+	manager *core.AchievementManager
+	core    *core.Core
 }
 
 // SetUserAchievement sets a user achievement
@@ -22,7 +24,7 @@ func (ac *AchievementClient) SetUserAchievement(achievementID int64, percentComp
 }
 
 // GetUserAchievement gets a user achievement
-func (ac *AchievementClient) GetUserAchievement(achievementID int64) (*UserAchievement, error) {
+func (ac *AchievementClient) GetUserAchievement(achievementID int64) (*core.UserAchievement, error) {
 	if ac.manager == nil {
 		return nil, fmt.Errorf("achievement manager not available")
 	}
@@ -33,7 +35,7 @@ func (ac *AchievementClient) GetUserAchievement(achievementID int64) (*UserAchie
 }
 
 // GetUserAchievementAt gets a user achievement at index
-func (ac *AchievementClient) GetUserAchievementAt(index int32) (*UserAchievement, error) {
+func (ac *AchievementClient) GetUserAchievementAt(index int32) (*core.UserAchievement, error) {
 	if ac.manager == nil {
 		return nil, fmt.Errorf("achievement manager not available")
 	}

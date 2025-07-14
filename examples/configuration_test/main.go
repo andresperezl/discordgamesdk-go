@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	discord "github.com/andresperezl/discordctl"
+	core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
@@ -15,20 +15,20 @@ func main() {
 
 	// Initialize Discord SDK
 	clientID := int64(1311711649018941501)
-	core, err := discord.Create(clientID, discord.CreateFlagsDefault, nil)
-	if err != discord.ResultOk {
+	coreObj, err := core.Create(clientID, core.CreateFlagsDefault, nil)
+	if err != core.ResultOk {
 		log.Fatalf("Failed to create Discord core: %v", err)
 	}
 	// Start the callback loop for robust event processing
-	core.Start()
-	defer core.Shutdown()
+	coreObj.Start()
+	defer coreObj.Shutdown()
 
 	fmt.Println("✓ Discord SDK initialized successfully")
 
 	// Wait for user info to become available (robust pattern)
 	fmt.Println("Waiting for user info...")
-	user, result := core.WaitForUser(5 * time.Second)
-	if result != discord.ResultOk {
+	user, result := coreObj.WaitForUser(5 * time.Second)
+	if result != core.ResultOk {
 		fmt.Printf("Warning: Failed to get current user: %v\n", result)
 		fmt.Println("  This might indicate Discord client issues or configuration problems")
 	} else {
@@ -37,7 +37,7 @@ func main() {
 
 	// Test 1: Application Manager (should always work)
 	fmt.Println("\n--- Test 1: Application Manager ---")
-	appManager := core.GetApplicationManager()
+	appManager := coreObj.GetApplicationManager()
 	if appManager != nil {
 		locale := appManager.GetCurrentLocale()
 		branch := appManager.GetCurrentBranch()
@@ -50,13 +50,13 @@ func main() {
 
 	// Test 2: Activity Manager (requires Rich Presence)
 	fmt.Println("\n--- Test 2: Activity Manager (Rich Presence) ---")
-	activityManager := core.GetActivityManager()
+	activityManager := coreObj.GetActivityManager()
 	if activityManager != nil {
 		fmt.Println("✓ Activity manager available")
 
 		// Test simple activity update
-		activity := discord.Activity{
-			Type:          discord.ActivityTypePlaying,
+		activity := core.Activity{
+			Type:          core.ActivityTypePlaying,
 			ApplicationID: clientID,
 			Name:          "Configuration Test",
 			State:         "Testing",
@@ -64,9 +64,9 @@ func main() {
 			Instance:      true,
 		}
 
-		activityManager.UpdateActivity(&activity, func(result discord.Result) {
+		activityManager.UpdateActivity(&activity, func(result core.Result) {
 			fmt.Printf("Activity update result: %v\n", result)
-			if result == discord.ResultOk {
+			if result == core.ResultOk {
 				fmt.Println("✓ Rich Presence is working!")
 			} else {
 				fmt.Printf("✗ Rich Presence failed: %v\n", result)
@@ -82,7 +82,7 @@ func main() {
 		time.Sleep(2 * time.Second)
 
 		// Clear activity
-		activityManager.ClearActivity(func(result discord.Result) {
+		activityManager.ClearActivity(func(result core.Result) {
 			fmt.Printf("Activity clear result: %v\n", result)
 		})
 
@@ -94,13 +94,13 @@ func main() {
 
 	// Test 3: User Manager (requires Bot user)
 	fmt.Println("\n--- Test 3: User Manager (Bot User) ---")
-	userManager := core.GetUserManager()
+	userManager := coreObj.GetUserManager()
 	if userManager != nil {
 		fmt.Println("✓ User manager available")
 
 		currentUser, result := userManager.GetCurrentUser()
 		fmt.Printf("User retrieval result: %v\n", result)
-		if result == discord.ResultOk {
+		if result == core.ResultOk {
 			fmt.Println("✓ User features are working!")
 			fmt.Printf("  User ID: %d\n", currentUser.ID)
 			fmt.Printf("  Username: %s\n", currentUser.Username)
@@ -119,7 +119,7 @@ func main() {
 
 	// Test 4: Storage Manager (should always work)
 	fmt.Println("\n--- Test 4: Storage Manager ---")
-	storageManager := core.GetStorageManager()
+	storageManager := coreObj.GetStorageManager()
 	if storageManager != nil {
 		fmt.Println("✓ Storage manager available")
 
@@ -127,7 +127,7 @@ func main() {
 		testData := []byte("configuration test")
 		result := storageManager.Write("config_test", testData)
 		fmt.Printf("Storage write result: %v\n", result)
-		if result == discord.ResultOk {
+		if result == core.ResultOk {
 			fmt.Println("✓ Storage is working!")
 
 			// Clean up

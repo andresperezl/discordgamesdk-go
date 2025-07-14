@@ -2,12 +2,14 @@ package discord
 
 import (
 	"fmt"
+
+	core "github.com/andresperezl/discordctl/core"
 )
 
 // NetworkClient provides Go-like interfaces for network management
 type NetworkClient struct {
-	manager *NetworkManager
-	core    *Core
+	manager *core.NetworkManager
+	core    *core.Core
 }
 
 // GetPeerID gets the local peer ID
@@ -24,7 +26,7 @@ func (nc *NetworkClient) Flush() error {
 		return fmt.Errorf("network manager not available")
 	}
 	result := nc.manager.Flush()
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to flush: %v", result)
 	}
 	return nil
@@ -36,7 +38,7 @@ func (nc *NetworkClient) OpenPeer(peerID uint64, route string) error {
 		return fmt.Errorf("network manager not available")
 	}
 	result := nc.manager.OpenPeer(peerID, route)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to open peer: %v", result)
 	}
 	return nil
@@ -48,7 +50,7 @@ func (nc *NetworkClient) UpdatePeer(peerID uint64, route string) error {
 		return fmt.Errorf("network manager not available")
 	}
 	result := nc.manager.UpdatePeer(peerID, route)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to update peer: %v", result)
 	}
 	return nil
@@ -60,7 +62,7 @@ func (nc *NetworkClient) ClosePeer(peerID uint64) error {
 		return fmt.Errorf("network manager not available")
 	}
 	result := nc.manager.ClosePeer(peerID)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to close peer: %v", result)
 	}
 	return nil
@@ -72,7 +74,7 @@ func (nc *NetworkClient) OpenChannel(peerID uint64, channelID uint8, reliable bo
 		return fmt.Errorf("network manager not available")
 	}
 	result := nc.manager.OpenChannel(peerID, channelID, reliable)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to open channel: %v", result)
 	}
 	return nil
@@ -84,7 +86,7 @@ func (nc *NetworkClient) CloseChannel(peerID uint64, channelID uint8) error {
 		return fmt.Errorf("network manager not available")
 	}
 	result := nc.manager.CloseChannel(peerID, channelID)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to close channel: %v", result)
 	}
 	return nil
@@ -96,7 +98,7 @@ func (nc *NetworkClient) SendMessage(peerID uint64, channelID uint8, data []byte
 		return fmt.Errorf("network manager not available")
 	}
 	result := nc.manager.SendMessage(peerID, channelID, data)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to send message: %v", result)
 	}
 	return nil

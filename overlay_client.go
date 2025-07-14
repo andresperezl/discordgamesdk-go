@@ -2,12 +2,14 @@ package discord
 
 import (
 	"fmt"
+
+	core "github.com/andresperezl/discordctl/core"
 )
 
 // OverlayClient provides Go-like interfaces for overlay management
 type OverlayClient struct {
-	manager *OverlayManager
-	core    *Core
+	manager *core.OverlayManager
+	core    *core.Core
 }
 
 // IsEnabled checks if the overlay is enabled
@@ -34,8 +36,8 @@ func (oc *OverlayClient) SetLocked(locked bool) <-chan error {
 		close(errChan)
 		return errChan
 	}
-	oc.manager.SetLocked(locked, func(result Result) {
-		if result != ResultOk {
+	oc.manager.SetLocked(locked, func(result core.Result) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to set locked: %v", result)
 		} else {
 			errChan <- nil
@@ -46,15 +48,15 @@ func (oc *OverlayClient) SetLocked(locked bool) <-chan error {
 }
 
 // OpenActivityInvite opens an activity invite asynchronously and returns a channel for the result
-func (oc *OverlayClient) OpenActivityInvite(actionType ActivityActionType) <-chan error {
+func (oc *OverlayClient) OpenActivityInvite(actionType core.ActivityActionType) <-chan error {
 	errChan := make(chan error, 1)
 	if oc.manager == nil {
 		errChan <- fmt.Errorf("overlay manager not available")
 		close(errChan)
 		return errChan
 	}
-	oc.manager.OpenActivityInvite(actionType, func(result Result) {
-		if result != ResultOk {
+	oc.manager.OpenActivityInvite(actionType, func(result core.Result) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to open activity invite: %v", result)
 		} else {
 			errChan <- nil
@@ -72,8 +74,8 @@ func (oc *OverlayClient) OpenGuildInvite(code string) <-chan error {
 		close(errChan)
 		return errChan
 	}
-	oc.manager.OpenGuildInvite(code, func(result Result) {
-		if result != ResultOk {
+	oc.manager.OpenGuildInvite(code, func(result core.Result) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to open guild invite: %v", result)
 		} else {
 			errChan <- nil
@@ -91,8 +93,8 @@ func (oc *OverlayClient) OpenVoiceSettings() <-chan error {
 		close(errChan)
 		return errChan
 	}
-	oc.manager.OpenVoiceSettings(func(result Result) {
-		if result != ResultOk {
+	oc.manager.OpenVoiceSettings(func(result core.Result) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to open voice settings: %v", result)
 		} else {
 			errChan <- nil

@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	core "github.com/andresperezl/discordctl/core"
 )
 
 // Client represents a Discord client with Go-like interfaces
 type Client struct {
-	core        *Core
+	core        *core.Core
 	clientID    int64
 	initialized bool
 	ctx         context.Context
@@ -18,7 +20,7 @@ type Client struct {
 // ClientConfig holds configuration for creating a Discord client
 type ClientConfig struct {
 	ClientID int64
-	Flags    CreateFlags
+	Flags    core.CreateFlags
 	Timeout  time.Duration
 }
 
@@ -26,7 +28,7 @@ type ClientConfig struct {
 func DefaultClientConfig(clientID int64) *ClientConfig {
 	return &ClientConfig{
 		ClientID: clientID,
-		Flags:    CreateFlagsDefault,
+		Flags:    core.CreateFlagsDefault,
 		Timeout:  10 * time.Second,
 	}
 }
@@ -39,14 +41,14 @@ func NewClient(config *ClientConfig) (*Client, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	core, result := Create(config.ClientID, config.Flags, nil)
-	if result != ResultOk {
+	coreObj, result := core.Create(config.ClientID, config.Flags, nil)
+	if result != core.ResultOk {
 		cancel()
 		return nil, fmt.Errorf("failed to create Discord core: %v", result)
 	}
 
 	client := &Client{
-		core:     core,
+		core:     coreObj,
 		clientID: config.ClientID,
 		ctx:      ctx,
 		cancel:   cancel,
@@ -82,13 +84,13 @@ func (c *Client) IsInitialized() bool {
 }
 
 // GetCurrentUser returns the current user, waiting if necessary
-func (c *Client) GetCurrentUser(timeout time.Duration) (*User, error) {
+func (c *Client) GetCurrentUser(timeout time.Duration) (*core.User, error) {
 	if !c.initialized {
 		return nil, fmt.Errorf("client not initialized")
 	}
 
 	user, result := c.core.WaitForUser(timeout)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return nil, fmt.Errorf("failed to get current user: %v", result)
 	}
 
@@ -96,8 +98,8 @@ func (c *Client) GetCurrentUser(timeout time.Duration) (*User, error) {
 }
 
 // GetCurrentUserAsync returns a channel that will receive the current user
-func (c *Client) GetCurrentUserAsync() <-chan *User {
-	ch := make(chan *User, 1)
+func (c *Client) GetCurrentUserAsync() <-chan *core.User {
+	ch := make(chan *core.User, 1)
 
 	go func() {
 		defer close(ch)

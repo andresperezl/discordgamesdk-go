@@ -2,12 +2,14 @@ package discord
 
 import (
 	"fmt"
+
+	core "github.com/andresperezl/discordctl/core"
 )
 
 // StorageClient provides Go-like interfaces for storage management
 type StorageClient struct {
-	manager *StorageManager
-	core    *Core
+	manager *core.StorageManager
+	core    *core.Core
 }
 
 // Read reads data from storage
@@ -17,7 +19,7 @@ func (sc *StorageClient) Read(name string) ([]byte, error) {
 	}
 	buf := make([]byte, 4096) // Default buffer size
 	n, result := sc.manager.Read(name, buf)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return nil, fmt.Errorf("failed to read: %v", result)
 	}
 	return buf[:n], nil
@@ -28,8 +30,8 @@ func (sc *StorageClient) ReadAsync(name string) (<-chan []byte, <-chan error) {
 	dataChan := make(chan []byte, 1)
 	errChan := make(chan error, 1)
 
-	sc.manager.ReadAsync(name, func(result Result, data []byte) {
-		if result != ResultOk {
+	sc.manager.ReadAsync(name, func(result core.Result, data []byte) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to read async: %v", result)
 			close(dataChan)
 			close(errChan)
@@ -49,7 +51,7 @@ func (sc *StorageClient) Write(name string, data []byte) error {
 		return fmt.Errorf("storage manager not available")
 	}
 	result := sc.manager.Write(name, data)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to write: %v", result)
 	}
 	return nil
@@ -59,8 +61,8 @@ func (sc *StorageClient) Write(name string, data []byte) error {
 func (sc *StorageClient) WriteAsync(name string, data []byte) <-chan error {
 	errChan := make(chan error, 1)
 
-	sc.manager.WriteAsync(name, data, func(result Result) {
-		if result != ResultOk {
+	sc.manager.WriteAsync(name, data, func(result core.Result) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to write async: %v", result)
 		} else {
 			errChan <- nil
@@ -77,7 +79,7 @@ func (sc *StorageClient) Delete(name string) error {
 		return fmt.Errorf("storage manager not available")
 	}
 	result := sc.manager.Delete(name)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return fmt.Errorf("failed to delete: %v", result)
 	}
 	return nil
@@ -89,7 +91,7 @@ func (sc *StorageClient) Exists(name string) (bool, error) {
 		return false, fmt.Errorf("storage manager not available")
 	}
 	exists, result := sc.manager.Exists(name)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return false, fmt.Errorf("failed to check existence: %v", result)
 	}
 	return exists, nil
@@ -101,19 +103,19 @@ func (sc *StorageClient) Count() (int32, error) {
 		return 0, fmt.Errorf("storage manager not available")
 	}
 	count, result := sc.manager.Count()
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return 0, fmt.Errorf("failed to count: %v", result)
 	}
 	return count, nil
 }
 
 // Stat gets file statistics
-func (sc *StorageClient) Stat(name string) (*FileStat, error) {
+func (sc *StorageClient) Stat(name string) (*core.FileStat, error) {
 	if sc.manager == nil {
 		return nil, fmt.Errorf("storage manager not available")
 	}
 	stat, result := sc.manager.Stat(name)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return nil, fmt.Errorf("failed to stat: %v", result)
 	}
 	return stat, nil
@@ -125,7 +127,7 @@ func (sc *StorageClient) GetPath() (string, error) {
 		return "", fmt.Errorf("storage manager not available")
 	}
 	path, result := sc.manager.GetPath()
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return "", fmt.Errorf("failed to get path: %v", result)
 	}
 	return path, nil

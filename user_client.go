@@ -2,22 +2,24 @@ package discord
 
 import (
 	"fmt"
+
+	core "github.com/andresperezl/discordctl/core"
 )
 
 // UserClient provides Go-like interfaces for user management
 type UserClient struct {
-	manager *UserManager
-	core    *Core
+	manager *core.UserManager
+	core    *core.Core
 }
 
 // GetCurrentUser returns the current user with Go-like error handling
-func (uc *UserClient) GetCurrentUser() (*User, error) {
+func (uc *UserClient) GetCurrentUser() (*core.User, error) {
 	if uc.manager == nil {
 		return nil, fmt.Errorf("user manager not available")
 	}
 
 	user, result := uc.manager.GetCurrentUser()
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return nil, fmt.Errorf("failed to get current user: %v", result)
 	}
 
@@ -25,17 +27,17 @@ func (uc *UserClient) GetCurrentUser() (*User, error) {
 }
 
 // GetUser gets a user by ID with Go-like error handling
-func (uc *UserClient) GetUser(userID int64) (*User, error) {
+func (uc *UserClient) GetUser(userID int64) (*core.User, error) {
 	if uc.manager == nil {
 		return nil, fmt.Errorf("user manager not available")
 	}
 
 	// Create a channel to receive the result
-	resultChan := make(chan *User, 1)
+	resultChan := make(chan *core.User, 1)
 	errChan := make(chan error, 1)
 
-	uc.manager.GetUser(userID, func(result Result, user *User) {
-		if result != ResultOk {
+	uc.manager.GetUser(userID, func(result core.Result, user *core.User) {
+		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to get user: %v", result)
 			return
 		}
@@ -51,27 +53,27 @@ func (uc *UserClient) GetUser(userID int64) (*User, error) {
 }
 
 // GetCurrentUserPremiumType returns the current user's premium type
-func (uc *UserClient) GetCurrentUserPremiumType() (PremiumType, error) {
+func (uc *UserClient) GetCurrentUserPremiumType() (core.PremiumType, error) {
 	if uc.manager == nil {
-		return PremiumTypeNone, fmt.Errorf("user manager not available")
+		return core.PremiumTypeNone, fmt.Errorf("user manager not available")
 	}
 
 	premiumType, result := uc.manager.GetCurrentUserPremiumType()
-	if result != ResultOk {
-		return PremiumTypeNone, fmt.Errorf("failed to get premium type: %v", result)
+	if result != core.ResultOk {
+		return core.PremiumTypeNone, fmt.Errorf("failed to get premium type: %v", result)
 	}
 
 	return premiumType, nil
 }
 
 // CurrentUserHasFlag checks if the current user has a specific flag
-func (uc *UserClient) CurrentUserHasFlag(flag UserFlag) (bool, error) {
+func (uc *UserClient) CurrentUserHasFlag(flag core.UserFlag) (bool, error) {
 	if uc.manager == nil {
 		return false, fmt.Errorf("user manager not available")
 	}
 
 	hasFlag, result := uc.manager.CurrentUserHasFlag(flag)
-	if result != ResultOk {
+	if result != core.ResultOk {
 		return false, fmt.Errorf("failed to check user flag: %v", result)
 	}
 
@@ -91,6 +93,6 @@ func NewUser(userID int64) *UserBuilder {
 }
 
 // Get retrieves the user
-func (ub *UserBuilder) Get(client *Client) (*User, error) {
+func (ub *UserBuilder) Get(client *Client) (*core.User, error) {
 	return client.User().GetUser(ub.userID)
 }

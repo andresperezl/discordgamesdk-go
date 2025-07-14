@@ -1,4 +1,4 @@
-package discord
+package core
 
 /*
 #cgo CFLAGS: -I${SRCDIR}/lib

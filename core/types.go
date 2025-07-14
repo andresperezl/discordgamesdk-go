@@ -1,4 +1,4 @@
-package discord
+package core
 
 // User represents a Discord user
 type User struct {

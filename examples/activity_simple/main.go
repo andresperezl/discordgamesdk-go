@@ -6,6 +6,7 @@ import (
 	"time"
 
 	discord "github.com/andresperezl/discordctl"
+	core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
@@ -39,7 +40,7 @@ func main() {
 	fmt.Println("\n=== Creating Simple Activity ===")
 
 	activity := discord.NewActivity().
-		SetType(discord.ActivityTypePlaying).
+		SetType(core.ActivityTypePlaying).
 		SetApplicationID(clientID).
 		SetName("Discord Go SDK").
 		SetState("Simple Example").

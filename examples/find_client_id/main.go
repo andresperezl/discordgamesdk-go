@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	discord "github.com/andresperezl/discordctl"
+	core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
@@ -23,27 +23,27 @@ func main() {
 	for i, clientID := range testClientIDs {
 		fmt.Printf("\n--- Test %d: Client ID %d ---\n", i+1, clientID)
 
-		core, err := discord.Create(clientID, discord.CreateFlagsDefault, nil)
-		if err != discord.ResultOk {
+		coreObj, err := core.Create(clientID, core.CreateFlagsDefault, nil)
+		if err != core.ResultOk {
 			fmt.Printf("✗ Failed to create Discord core: %v\n", err)
 			continue
 		}
 
 		// Start the callback loop for robust event processing
-		core.Start()
+		coreObj.Start()
 
 		fmt.Println("✓ Discord SDK initialized successfully")
 
 		// Wait for user info to become available (robust pattern)
-		user, result := core.WaitForUser(3 * time.Second)
-		if result == discord.ResultOk {
+		user, result := coreObj.WaitForUser(3 * time.Second)
+		if result == core.ResultOk {
 			fmt.Printf("✓ Connected as user: %s\n", user.Username)
 		} else {
 			fmt.Printf("⚠ User connection failed: %v\n", result)
 		}
 
 		// Test application manager
-		appManager := core.GetApplicationManager()
+		appManager := coreObj.GetApplicationManager()
 		if appManager != nil {
 			locale := appManager.GetCurrentLocale()
 			branch := appManager.GetCurrentBranch()
@@ -51,23 +51,23 @@ func main() {
 		}
 
 		// Test activity manager
-		activityManager := core.GetActivityManager()
+		activityManager := coreObj.GetActivityManager()
 		if activityManager != nil {
 			fmt.Println("✓ Activity manager working")
 		}
 
 		// Test user manager
-		userManager := core.GetUserManager()
+		userManager := coreObj.GetUserManager()
 		if userManager != nil {
 			_, result := userManager.GetCurrentUser()
-			if result == discord.ResultOk {
+			if result == core.ResultOk {
 				fmt.Println("✓ User manager working")
 			} else {
 				fmt.Printf("⚠ User manager available but user retrieval failed: %v\n", result)
 			}
 		}
 
-		core.Shutdown()
+		coreObj.Shutdown()
 		fmt.Printf("✓ Client ID %d appears to be valid!\n", clientID)
 	}
 

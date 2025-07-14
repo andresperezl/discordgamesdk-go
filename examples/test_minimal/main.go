@@ -3,15 +3,15 @@ package main
 import (
 	"fmt"
 
-	discord "github.com/andresperezl/discordctl"
+	core "github.com/andresperezl/discordctl/core"
 )
 
 func main() {
 	fmt.Println("Testing Discord SDK initialization...")
 
 	// Try to create a Discord core instance
-	core, result := discord.Create(1311711649018941501, 0, nil)
-	if result != discord.ResultOk {
+	coreObj, result := core.Create(1311711649018941501, 0, nil)
+	if result != core.ResultOk {
 		fmt.Printf("Failed to create Discord core: %v\n", result)
 		return
 	}
@@ -19,11 +19,11 @@ func main() {
 	fmt.Println("Discord core created successfully!")
 
 	// Try to run callbacks
-	callbackResult := core.RunCallbacks()
+	callbackResult := coreObj.RunCallbacks()
 	fmt.Printf("RunCallbacks result: %v\n", callbackResult)
 
 	// Clean up
-	core.Destroy()
+	coreObj.Destroy()
 
 	fmt.Println("Test completed successfully!")
 }
