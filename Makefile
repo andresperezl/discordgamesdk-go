@@ -74,9 +74,11 @@ build-win-dll:
 # Build the main package
 build: sdk-check
 	@echo "Building main package for architecture: $(ARCH)..."
-	@go build -o discordctl .
 ifeq ($(OS),Windows_NT)
+	@go build -o discordctl.exe .
 	@$(MAKE) build-win-dll
+else
+	@go build -o discordctl .
 endif
 
 # Windows-specific DLL copy for examples
@@ -92,7 +94,7 @@ ifeq ($(OS),Windows_NT)
 	@if not exist examples\bin mkdir examples\bin
 	@for %%d in (examples\activity examples\activity_simple examples\basic examples\callback_test examples\configuration_test examples\diagnostic examples\find_client_id examples\storage examples\test_minimal examples\user) do @if exist %%d\main.go ( \
 		echo Building %%~nxd... && \
-		go build -o examples\bin\%%~nxd %%d\main.go \
+		go build -o examples\bin\%%~nxd.exe %%d\main.go \
 	)
 	@$(MAKE) examples-win-dll
 else
@@ -111,6 +113,7 @@ endif
 clean:
 	@echo "Cleaning build artifacts..."
 ifeq ($(OS),Windows_NT)
+	@if exist discordctl.exe del discordctl.exe
 	@if exist discordctl del discordctl
 	@if exist discord_game_sdk.dll del discord_game_sdk.dll
 	@if exist discord_game_sdk.dll.lib del discord_game_sdk.dll.lib
