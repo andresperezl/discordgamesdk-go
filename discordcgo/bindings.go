@@ -5,6 +5,21 @@ package discordcgo
 #cgo LDFLAGS: -L${SRCDIR}/../lib -ldiscord_game_sdk
 #include "discord_game_sdk.h"
 #include "discord_wrappers.h"
+#include <stdint.h>
+#include <string.h>
+
+int64_t get_discord_sku_id(struct DiscordSku* sku) { return sku->id; }
+int32_t get_discord_sku_type(struct DiscordSku* sku) { return sku->type; }
+void get_discord_sku_name(struct DiscordSku* sku, char* out, int outlen) { strncpy(out, sku->name, outlen-1); out[outlen-1] = '\0'; }
+uint32_t get_discord_sku_price_amount(struct DiscordSku* sku) { return sku->price.amount; }
+void get_discord_sku_price_currency(struct DiscordSku* sku, char* out, int outlen) { strncpy(out, sku->price.currency, outlen-1); out[outlen-1] = '\0'; }
+
+int64_t get_discord_entitlement_id(struct DiscordEntitlement* ent) { return ent->id; }
+int32_t get_discord_entitlement_type(struct DiscordEntitlement* ent) { return ent->type; }
+int64_t get_discord_entitlement_sku_id(struct DiscordEntitlement* ent) { return ent->sku_id; }
+uint64_t get_discord_file_stat_size(struct DiscordFileStat* stat) { return stat->size; }
+uint64_t get_discord_file_stat_last_modified(struct DiscordFileStat* stat) { return stat->last_modified; }
+void get_discord_file_stat_filename(struct DiscordFileStat* stat, char* out, int outlen) { strncpy(out, stat->filename, outlen-1); out[outlen-1] = '\0'; }
 */
 import "C"
 import "unsafe"
@@ -240,10 +255,12 @@ func LobbyTransactionSetCapacity(transaction unsafe.Pointer, capacity uint32) in
 	return int32(C.discord_lobby_transaction_set_capacity((*C.struct_IDiscordLobbyTransaction)(transaction), C.uint32_t(capacity)))
 }
 
+// LobbyTransactionSetMetadata sets metadata on a lobby transaction
 func LobbyTransactionSetMetadata(transaction unsafe.Pointer, key *C.char, value *C.char) int32 {
 	return int32(C.discord_lobby_transaction_set_metadata((*C.struct_IDiscordLobbyTransaction)(transaction), key, value))
 }
 
+// LobbyTransactionDeleteMetadata deletes metadata from a lobby transaction
 func LobbyTransactionDeleteMetadata(transaction unsafe.Pointer, key *C.char) int32 {
 	return int32(C.discord_lobby_transaction_delete_metadata((*C.struct_IDiscordLobbyTransaction)(transaction), key))
 }
@@ -357,4 +374,365 @@ func StringToCCharPtr(s string) unsafe.Pointer {
 	}
 	bytes := []byte(s)
 	return unsafe.Pointer(&bytes[0])
+}
+
+// GoStringToCChar converts a Go string to a *C.char (null-terminated C string)
+func GoStringToCChar(s string) *C.char {
+	if s == "" {
+		return nil
+	}
+	return C.CString(s)
+}
+
+// FreeCChar frees a *C.char allocated by GoStringToCChar
+func FreeCChar(cstr *C.char) {
+	if cstr != nil {
+		C.free(unsafe.Pointer(cstr))
+	}
+}
+
+// Additional storage manager wrappers
+func StorageManagerReadAsyncPartial(manager unsafe.Pointer, name *C.char, offset uint64, length uint64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_storage_manager_read_async_partial((*C.struct_IDiscordStorageManager)(manager), name, C.uint64_t(offset), C.uint64_t(length), callbackData, (*[0]byte)(callback))
+}
+
+func StorageManagerWriteAsync(manager unsafe.Pointer, name *C.char, data unsafe.Pointer, dataLength uint32, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_storage_manager_write_async((*C.struct_IDiscordStorageManager)(manager), name, (*C.uint8_t)(data), C.uint32_t(dataLength), callbackData, (*[0]byte)(callback))
+}
+
+func StorageManagerStat(manager unsafe.Pointer, name *C.char, stat unsafe.Pointer) int32 {
+	return int32(C.discord_storage_manager_stat((*C.struct_IDiscordStorageManager)(manager), name, (*C.struct_DiscordFileStat)(stat)))
+}
+
+func StorageManagerStatAt(manager unsafe.Pointer, index int32, stat unsafe.Pointer) int32 {
+	return int32(C.discord_storage_manager_stat_at((*C.struct_IDiscordStorageManager)(manager), C.int32_t(index), (*C.struct_DiscordFileStat)(stat)))
+}
+
+func StorageManagerGetPath(manager unsafe.Pointer, path unsafe.Pointer) int32 {
+	return int32(C.discord_storage_manager_get_path((*C.struct_IDiscordStorageManager)(manager), (*C.DiscordPath)(path)))
+}
+
+// Additional overlay manager wrappers
+func OverlayManagerInitDrawingDXGI(manager unsafe.Pointer, swapchain unsafe.Pointer, useMessageForwarding bool) int32 {
+	return int32(C.discord_overlay_manager_init_drawing_dxgi((*C.struct_IDiscordOverlayManager)(manager), swapchain, C.bool(useMessageForwarding)))
+}
+
+func OverlayManagerOnPresent(manager unsafe.Pointer) {
+	C.discord_overlay_manager_on_present((*C.struct_IDiscordOverlayManager)(manager))
+}
+
+func OverlayManagerForwardMessage(manager unsafe.Pointer, message unsafe.Pointer) {
+	C.discord_overlay_manager_forward_message((*C.struct_IDiscordOverlayManager)(manager), message)
+}
+
+func OverlayManagerKeyEvent(manager unsafe.Pointer, down bool, keyCode *C.char, variant int32) {
+	C.discord_overlay_manager_key_event((*C.struct_IDiscordOverlayManager)(manager), C.bool(down), keyCode, C.enum_EDiscordKeyVariant(variant))
+}
+
+func OverlayManagerCharEvent(manager unsafe.Pointer, character *C.char) {
+	C.discord_overlay_manager_char_event((*C.struct_IDiscordOverlayManager)(manager), character)
+}
+
+func OverlayManagerMouseButtonEvent(manager unsafe.Pointer, down uint8, clickCount int32, which int32, x int32, y int32) {
+	C.discord_overlay_manager_mouse_button_event((*C.struct_IDiscordOverlayManager)(manager), C.uint8_t(down), C.int32_t(clickCount), C.enum_EDiscordMouseButton(which), C.int32_t(x), C.int32_t(y))
+}
+
+func OverlayManagerMouseMotionEvent(manager unsafe.Pointer, x int32, y int32) {
+	C.discord_overlay_manager_mouse_motion_event((*C.struct_IDiscordOverlayManager)(manager), C.int32_t(x), C.int32_t(y))
+}
+
+func OverlayManagerImeCommitText(manager unsafe.Pointer, text *C.char) {
+	C.discord_overlay_manager_ime_commit_text((*C.struct_IDiscordOverlayManager)(manager), text)
+}
+
+func OverlayManagerImeSetComposition(manager unsafe.Pointer, text *C.char, underlines unsafe.Pointer, underlinesLength uint32, from int32, to int32) {
+	C.discord_overlay_manager_ime_set_composition((*C.struct_IDiscordOverlayManager)(manager), text, (*C.struct_DiscordImeUnderline)(underlines), C.uint32_t(underlinesLength), C.int32_t(from), C.int32_t(to))
+}
+
+func OverlayManagerImeCancelComposition(manager unsafe.Pointer) {
+	C.discord_overlay_manager_ime_cancel_composition((*C.struct_IDiscordOverlayManager)(manager))
+}
+
+func OverlayManagerSetImeCompositionRangeCallback(manager unsafe.Pointer, onImeCompositionRangeChangedData unsafe.Pointer, onImeCompositionRangeChanged unsafe.Pointer) {
+	C.discord_overlay_manager_set_ime_composition_range_callback((*C.struct_IDiscordOverlayManager)(manager), onImeCompositionRangeChangedData, (*[0]byte)(onImeCompositionRangeChanged))
+}
+
+func OverlayManagerSetImeSelectionBoundsCallback(manager unsafe.Pointer, onImeSelectionBoundsChangedData unsafe.Pointer, onImeSelectionBoundsChanged unsafe.Pointer) {
+	C.discord_overlay_manager_set_ime_selection_bounds_callback((*C.struct_IDiscordOverlayManager)(manager), onImeSelectionBoundsChangedData, (*[0]byte)(onImeSelectionBoundsChanged))
+}
+
+func OverlayManagerIsPointInsideClickZone(manager unsafe.Pointer, x int32, y int32) bool {
+	return bool(C.discord_overlay_manager_is_point_inside_click_zone((*C.struct_IDiscordOverlayManager)(manager), C.int32_t(x), C.int32_t(y)))
+}
+
+// Store manager wrappers
+func StoreManagerFetchSkus(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_store_manager_fetch_skus((*C.struct_IDiscordStoreManager)(manager), callbackData, (*[0]byte)(callback))
+}
+
+func StoreManagerCountSkus(manager unsafe.Pointer, count unsafe.Pointer) {
+	C.discord_store_manager_count_skus((*C.struct_IDiscordStoreManager)(manager), (*C.int32_t)(count))
+}
+
+func StoreManagerGetSku(manager unsafe.Pointer, skuID int64, sku unsafe.Pointer) int32 {
+	return int32(C.discord_store_manager_get_sku((*C.struct_IDiscordStoreManager)(manager), C.DiscordSnowflake(skuID), (*C.struct_DiscordSku)(sku)))
+}
+
+func StoreManagerGetSkuAt(manager unsafe.Pointer, index int32, sku unsafe.Pointer) int32 {
+	return int32(C.discord_store_manager_get_sku_at((*C.struct_IDiscordStoreManager)(manager), C.int32_t(index), (*C.struct_DiscordSku)(sku)))
+}
+
+func StoreManagerFetchEntitlements(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_store_manager_fetch_entitlements((*C.struct_IDiscordStoreManager)(manager), callbackData, (*[0]byte)(callback))
+}
+
+func StoreManagerCountEntitlements(manager unsafe.Pointer, count unsafe.Pointer) {
+	C.discord_store_manager_count_entitlements((*C.struct_IDiscordStoreManager)(manager), (*C.int32_t)(count))
+}
+
+func StoreManagerGetEntitlement(manager unsafe.Pointer, entitlementID int64, entitlement unsafe.Pointer) int32 {
+	return int32(C.discord_store_manager_get_entitlement((*C.struct_IDiscordStoreManager)(manager), C.DiscordSnowflake(entitlementID), (*C.struct_DiscordEntitlement)(entitlement)))
+}
+
+func StoreManagerGetEntitlementAt(manager unsafe.Pointer, index int32, entitlement unsafe.Pointer) int32 {
+	return int32(C.discord_store_manager_get_entitlement_at((*C.struct_IDiscordStoreManager)(manager), C.int32_t(index), (*C.struct_DiscordEntitlement)(entitlement)))
+}
+
+func StoreManagerHasSkuEntitlement(manager unsafe.Pointer, skuID int64, hasEntitlement unsafe.Pointer) int32 {
+	return int32(C.discord_store_manager_has_sku_entitlement((*C.struct_IDiscordStoreManager)(manager), C.DiscordSnowflake(skuID), (*C.bool)(hasEntitlement)))
+}
+
+func StoreManagerStartPurchase(manager unsafe.Pointer, skuID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_store_manager_start_purchase((*C.struct_IDiscordStoreManager)(manager), C.DiscordSnowflake(skuID), callbackData, (*[0]byte)(callback))
+}
+
+// Voice manager wrappers
+func VoiceManagerGetInputMode(manager unsafe.Pointer, inputMode unsafe.Pointer) int32 {
+	return int32(C.discord_voice_manager_get_input_mode((*C.struct_IDiscordVoiceManager)(manager), (*C.struct_DiscordInputMode)(inputMode)))
+}
+
+func VoiceManagerSetInputMode(manager unsafe.Pointer, inputMode unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_voice_manager_set_input_mode((*C.struct_IDiscordVoiceManager)(manager), *(*C.struct_DiscordInputMode)(inputMode), callbackData, (*[0]byte)(callback))
+}
+
+func VoiceManagerIsSelfMute(manager unsafe.Pointer, mute unsafe.Pointer) int32 {
+	return int32(C.discord_voice_manager_is_self_mute((*C.struct_IDiscordVoiceManager)(manager), (*C.bool)(mute)))
+}
+
+func VoiceManagerSetSelfMute(manager unsafe.Pointer, mute bool) int32 {
+	return int32(C.discord_voice_manager_set_self_mute((*C.struct_IDiscordVoiceManager)(manager), C.bool(mute)))
+}
+
+func VoiceManagerIsSelfDeaf(manager unsafe.Pointer, deaf unsafe.Pointer) int32 {
+	return int32(C.discord_voice_manager_is_self_deaf((*C.struct_IDiscordVoiceManager)(manager), (*C.bool)(deaf)))
+}
+
+func VoiceManagerSetSelfDeaf(manager unsafe.Pointer, deaf bool) int32 {
+	return int32(C.discord_voice_manager_set_self_deaf((*C.struct_IDiscordVoiceManager)(manager), C.bool(deaf)))
+}
+
+func VoiceManagerIsLocalMute(manager unsafe.Pointer, userID int64, mute unsafe.Pointer) int32 {
+	return int32(C.discord_voice_manager_is_local_mute((*C.struct_IDiscordVoiceManager)(manager), C.DiscordSnowflake(userID), (*C.bool)(mute)))
+}
+
+func VoiceManagerSetLocalMute(manager unsafe.Pointer, userID int64, mute bool) int32 {
+	return int32(C.discord_voice_manager_set_local_mute((*C.struct_IDiscordVoiceManager)(manager), C.DiscordSnowflake(userID), C.bool(mute)))
+}
+
+func VoiceManagerGetLocalVolume(manager unsafe.Pointer, userID int64, volume unsafe.Pointer) int32 {
+	return int32(C.discord_voice_manager_get_local_volume((*C.struct_IDiscordVoiceManager)(manager), C.DiscordSnowflake(userID), (*C.uint8_t)(volume)))
+}
+
+func VoiceManagerSetLocalVolume(manager unsafe.Pointer, userID int64, volume uint8) int32 {
+	return int32(C.discord_voice_manager_set_local_volume((*C.struct_IDiscordVoiceManager)(manager), C.DiscordSnowflake(userID), C.uint8_t(volume)))
+}
+
+// Achievement manager wrappers
+func AchievementManagerSetUserAchievement(manager unsafe.Pointer, achievementID int64, percentComplete uint8, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_achievement_manager_set_user_achievement((*C.struct_IDiscordAchievementManager)(manager), C.DiscordSnowflake(achievementID), C.uint8_t(percentComplete), callbackData, (*[0]byte)(callback))
+}
+
+func AchievementManagerFetchUserAchievements(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_achievement_manager_fetch_user_achievements((*C.struct_IDiscordAchievementManager)(manager), callbackData, (*[0]byte)(callback))
+}
+
+func AchievementManagerCountUserAchievements(manager unsafe.Pointer, count unsafe.Pointer) {
+	C.discord_achievement_manager_count_user_achievements((*C.struct_IDiscordAchievementManager)(manager), (*C.int32_t)(count))
+}
+
+func AchievementManagerGetUserAchievement(manager unsafe.Pointer, userAchievementID int64, userAchievement unsafe.Pointer) int32 {
+	return int32(C.discord_achievement_manager_get_user_achievement((*C.struct_IDiscordAchievementManager)(manager), C.DiscordSnowflake(userAchievementID), (*C.struct_DiscordUserAchievement)(userAchievement)))
+}
+
+func AchievementManagerGetUserAchievementAt(manager unsafe.Pointer, index int32, userAchievement unsafe.Pointer) int32 {
+	return int32(C.discord_achievement_manager_get_user_achievement_at((*C.struct_IDiscordAchievementManager)(manager), C.int32_t(index), (*C.struct_DiscordUserAchievement)(userAchievement)))
+}
+
+// Go-friendly storage manager wrappers
+func StorageManagerReadGo(manager unsafe.Pointer, name string, data []byte, read *uint32) int32 {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	var datPtr unsafe.Pointer
+	if len(data) > 0 {
+		datPtr = unsafe.Pointer(&data[0])
+	}
+	return StorageManagerRead(manager, cname, datPtr, uint32(len(data)), unsafe.Pointer(read))
+}
+
+func StorageManagerWriteGo(manager unsafe.Pointer, name string, data []byte) int32 {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	var datPtr unsafe.Pointer
+	if len(data) > 0 {
+		datPtr = unsafe.Pointer(&data[0])
+	}
+	return StorageManagerWrite(manager, cname, datPtr, uint32(len(data)))
+}
+
+func StorageManagerDeleteGo(manager unsafe.Pointer, name string) int32 {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	return StorageManagerDelete_(manager, cname)
+}
+
+func StorageManagerExistsGo(manager unsafe.Pointer, name string, exists *bool) int32 {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	var cExists C.bool
+	res := StorageManagerExists(manager, cname, unsafe.Pointer(&cExists))
+	*exists = bool(cExists)
+	return res
+}
+
+func StorageManagerStatGo(manager unsafe.Pointer, name string, stat unsafe.Pointer) int32 {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	return StorageManagerStat(manager, cname, stat)
+}
+
+func StorageManagerStatAtGo(manager unsafe.Pointer, index int32, stat unsafe.Pointer) int32 {
+	return StorageManagerStatAt(manager, index, stat)
+}
+
+func StorageManagerGetPathGo(manager unsafe.Pointer, path unsafe.Pointer) int32 {
+	return StorageManagerGetPath(manager, path)
+}
+
+// NetworkManagerOpenPeerHelper is a Go-friendly wrapper for NetworkManagerOpenPeer
+func NetworkManagerOpenPeerHelper(manager unsafe.Pointer, peerID uint64, routeData string) int32 {
+	cRoute := GoStringToCChar(routeData)
+	defer FreeCChar(cRoute)
+	return NetworkManagerOpenPeer(manager, peerID, cRoute)
+}
+
+// NetworkManagerUpdatePeerHelper is a Go-friendly wrapper for NetworkManagerUpdatePeer
+func NetworkManagerUpdatePeerHelper(manager unsafe.Pointer, peerID uint64, routeData string) int32 {
+	cRoute := GoStringToCChar(routeData)
+	defer FreeCChar(cRoute)
+	return NetworkManagerUpdatePeer(manager, peerID, cRoute)
+}
+
+// DiscordSku field accessors
+func GetDiscordSkuID(ptr unsafe.Pointer) int64 {
+	return int64(C.get_discord_sku_id((*C.struct_DiscordSku)(ptr)))
+}
+func GetDiscordSkuType(ptr unsafe.Pointer) int32 {
+	return int32(C.get_discord_sku_type((*C.struct_DiscordSku)(ptr)))
+}
+func GetDiscordSkuName(ptr unsafe.Pointer) string {
+	var buf [256]C.char
+	C.get_discord_sku_name((*C.struct_DiscordSku)(ptr), &buf[0], 256)
+	return C.GoString(&buf[0])
+}
+func GetDiscordSkuPriceAmount(ptr unsafe.Pointer) uint32 {
+	return uint32(C.get_discord_sku_price_amount((*C.struct_DiscordSku)(ptr)))
+}
+func GetDiscordSkuPriceCurrency(ptr unsafe.Pointer) string {
+	var buf [16]C.char
+	C.get_discord_sku_price_currency((*C.struct_DiscordSku)(ptr), &buf[0], 16)
+	return C.GoString(&buf[0])
+}
+
+// DiscordEntitlement field accessors
+func GetDiscordEntitlementID(ptr unsafe.Pointer) int64 {
+	return int64(C.get_discord_entitlement_id((*C.struct_DiscordEntitlement)(ptr)))
+}
+func GetDiscordEntitlementType(ptr unsafe.Pointer) int32 {
+	return int32(C.get_discord_entitlement_type((*C.struct_DiscordEntitlement)(ptr)))
+}
+func GetDiscordEntitlementSkuID(ptr unsafe.Pointer) int64 {
+	return int64(C.get_discord_entitlement_sku_id((*C.struct_DiscordEntitlement)(ptr)))
+}
+
+// FileStat field accessors
+func GetDiscordFileStatFilename(stat *DiscordFileStat) string {
+	var buf [260]C.char
+	C.get_discord_file_stat_filename((*C.struct_DiscordFileStat)(unsafe.Pointer(stat)), &buf[0], 260)
+	return C.GoString(&buf[0])
+}
+func GetDiscordFileStatSize(stat *DiscordFileStat) uint64 {
+	return uint64(C.get_discord_file_stat_size((*C.struct_DiscordFileStat)(unsafe.Pointer(stat))))
+}
+func GetDiscordFileStatLastModified(stat *DiscordFileStat) uint64 {
+	return uint64(C.get_discord_file_stat_last_modified((*C.struct_DiscordFileStat)(unsafe.Pointer(stat))))
+}
+
+// Type aliases for C structs
+
+type DiscordSku C.struct_DiscordSku
+
+type DiscordEntitlement C.struct_DiscordEntitlement
+
+// Malloc and Free helpers for DiscordSku and DiscordEntitlement
+func MallocDiscordSku() unsafe.Pointer {
+	return C.malloc(C.sizeof_struct_DiscordSku)
+}
+
+func MallocDiscordEntitlement() unsafe.Pointer {
+	return C.malloc(C.sizeof_struct_DiscordEntitlement)
+}
+
+func Free(ptr unsafe.Pointer) {
+	C.free(ptr)
+}
+
+// Get typed pointer from unsafe.Pointer
+func GetDiscordSku(ptr unsafe.Pointer) *DiscordSku {
+	return (*DiscordSku)(ptr)
+}
+
+func GetDiscordEntitlement(ptr unsafe.Pointer) *DiscordEntitlement {
+	return (*DiscordEntitlement)(ptr)
+}
+
+// Type aliases for C structs used in storage
+
+type DiscordFileStat C.struct_DiscordFileStat
+
+type DiscordPath C.DiscordPath
+
+// GoString helper for C strings
+func GoString(cstr *C.char) string {
+	return C.GoString(cstr)
+}
+
+// Go-friendly StoreManager SKU helpers
+func StoreManagerGetSkuGo(manager unsafe.Pointer, skuID int64) *DiscordSku {
+	ptr := MallocDiscordSku()
+	defer Free(ptr)
+	res := StoreManagerGetSku(manager, skuID, ptr)
+	if res != 0 {
+		return nil
+	}
+	return GetDiscordSku(ptr)
+}
+
+func StoreManagerGetSkuAtGo(manager unsafe.Pointer, index int32) *DiscordSku {
+	ptr := MallocDiscordSku()
+	defer Free(ptr)
+	res := StoreManagerGetSkuAt(manager, index, ptr)
+	if res != 0 {
+		return nil
+	}
+	return GetDiscordSku(ptr)
 }

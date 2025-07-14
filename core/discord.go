@@ -511,3 +511,114 @@ func (c *Core) GetAchievementManager() *AchievementManager {
 
 // LogHook represents a log hook function
 type LogHook func(level LogLevel, message string)
+
+// StoreManager methods
+
+// CountSkus returns the number of SKUs
+func (s *StoreManager) CountSkus() (int32, Result) {
+	if s.manager == nil {
+		return 0, ResultInternalError
+	}
+	var count int32
+	dcgo.StoreManagerCountSkus(s.manager, unsafe.Pointer(&count))
+	return count, ResultOk
+}
+
+// GetSku retrieves a SKU by its ID
+func (s *StoreManager) GetSku(skuID int64) (*Sku, Result) {
+	if s.manager == nil {
+		return nil, ResultInternalError
+	}
+	sku := dcgo.StoreManagerGetSkuGo(s.manager, skuID)
+	if sku == nil {
+		return nil, ResultInternalError
+	}
+	return convertDiscordSku(sku), ResultOk
+}
+
+// GetSkuAt retrieves a SKU by index
+func (s *StoreManager) GetSkuAt(index int32) (*Sku, Result) {
+	if s.manager == nil {
+		return nil, ResultInternalError
+	}
+	sku := dcgo.StoreManagerGetSkuAtGo(s.manager, index)
+	if sku == nil {
+		return nil, ResultInternalError
+	}
+	return convertDiscordSku(sku), ResultOk
+}
+
+// CountEntitlements returns the number of entitlements
+func (s *StoreManager) CountEntitlements() (int32, Result) {
+	if s.manager == nil {
+		return 0, ResultInternalError
+	}
+	var count int32
+	dcgo.StoreManagerCountEntitlements(s.manager, unsafe.Pointer(&count))
+	return count, ResultOk
+}
+
+// GetEntitlement retrieves an entitlement by its ID
+func (s *StoreManager) GetEntitlement(entitlementID int64) (*Entitlement, Result) {
+	if s.manager == nil {
+		return nil, ResultInternalError
+	}
+	ptr := dcgo.MallocDiscordEntitlement()
+	defer dcgo.Free(ptr)
+	res := dcgo.StoreManagerGetEntitlement(s.manager, entitlementID, ptr)
+	if res != 0 {
+		return nil, Result(res)
+	}
+	return convertDiscordEntitlement(dcgo.GetDiscordEntitlement(ptr)), ResultOk
+}
+
+// GetEntitlementAt retrieves an entitlement by index
+func (s *StoreManager) GetEntitlementAt(index int32) (*Entitlement, Result) {
+	if s.manager == nil {
+		return nil, ResultInternalError
+	}
+	ptr := dcgo.MallocDiscordEntitlement()
+	defer dcgo.Free(ptr)
+	res := dcgo.StoreManagerGetEntitlementAt(s.manager, index, ptr)
+	if res != 0 {
+		return nil, Result(res)
+	}
+	return convertDiscordEntitlement(dcgo.GetDiscordEntitlement(ptr)), ResultOk
+}
+
+// HasSkuEntitlement checks if a SKU has an entitlement
+func (s *StoreManager) HasSkuEntitlement(skuID int64) (bool, Result) {
+	if s.manager == nil {
+		return false, ResultInternalError
+	}
+	var hasEntitlement bool
+	res := dcgo.StoreManagerHasSkuEntitlement(s.manager, skuID, unsafe.Pointer(&hasEntitlement))
+	return hasEntitlement, Result(res)
+}
+
+// Helper conversion functions
+func convertDiscordSku(sku *dcgo.DiscordSku) *Sku {
+	if sku == nil {
+		return nil
+	}
+	return &Sku{
+		ID:   int64(dcgo.GetDiscordSkuID(unsafe.Pointer(sku))),
+		Type: SkuType(dcgo.GetDiscordSkuType(unsafe.Pointer(sku))),
+		Name: dcgo.GetDiscordSkuName(unsafe.Pointer(sku)),
+		Price: SkuPrice{
+			Amount:   uint32(dcgo.GetDiscordSkuPriceAmount(unsafe.Pointer(sku))),
+			Currency: dcgo.GetDiscordSkuPriceCurrency(unsafe.Pointer(sku)),
+		},
+	}
+}
+
+func convertDiscordEntitlement(ent *dcgo.DiscordEntitlement) *Entitlement {
+	if ent == nil {
+		return nil
+	}
+	return &Entitlement{
+		ID:    int64(dcgo.GetDiscordEntitlementID(unsafe.Pointer(ent))),
+		Type:  EntitlementType(dcgo.GetDiscordEntitlementType(unsafe.Pointer(ent))),
+		SkuID: int64(dcgo.GetDiscordEntitlementSkuID(unsafe.Pointer(ent))),
+	}
+}
