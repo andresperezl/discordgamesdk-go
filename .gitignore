@@ -22,4 +22,12 @@ Thumbs.db
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Discord SDK files
+*.zip
+temp_sdk/
+examples/bin/
+
+# Discord SDK libraries
+lib/discord_game_sdk.* 
