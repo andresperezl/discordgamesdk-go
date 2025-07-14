@@ -1,0 +1,415 @@
+package discord
+
+import (
+	"fmt"
+	"sync"
+	"time"
+	"unsafe"
+
+	dcgo "github.com/andresperezl/discordctl/discordcgo"
+)
+
+// StoreManager provides access to store-related functionality
+type StoreManager struct {
+	manager unsafe.Pointer
+}
+
+// VoiceManager provides access to voice-related functionality
+type VoiceManager struct {
+	manager unsafe.Pointer
+}
+
+// AchievementManager provides access to achievement-related functionality
+type AchievementManager struct {
+	manager unsafe.Pointer
+}
+
+// Version constants
+const (
+	DiscordVersion = 3 // Should match DISCORD_VERSION in the SDK
+)
+
+// Result codes
+type Result int32
+
+const (
+	ResultOk                              Result = 0
+	ResultServiceUnavailable              Result = 1
+	ResultInvalidVersion                  Result = 2
+	ResultLockFailed                      Result = 3
+	ResultInternalError                   Result = 4
+	ResultInvalidPayload                  Result = 5
+	ResultInvalidCommand                  Result = 6
+	ResultInvalidPermissions              Result = 7
+	ResultNotFetched                      Result = 8
+	ResultNotFound                        Result = 9
+	ResultConflict                        Result = 10
+	ResultInvalidSecret                   Result = 11
+	ResultInvalidJoinSecret               Result = 12
+	ResultNoEligibleActivity              Result = 13
+	ResultInvalidInvite                   Result = 14
+	ResultNotAuthenticated                Result = 15
+	ResultInvalidAccessToken              Result = 16
+	ResultApplicationMismatch             Result = 17
+	ResultInvalidDataUrl                  Result = 18
+	ResultInvalidBase64                   Result = 19
+	ResultNotFiltered                     Result = 20
+	ResultLobbyFull                       Result = 21
+	ResultInvalidLobbySecret              Result = 22
+	ResultInvalidFilename                 Result = 23
+	ResultInvalidFileSize                 Result = 24
+	ResultInvalidEntitlement              Result = 25
+	ResultNotInstalled                    Result = 26
+	ResultNotRunning                      Result = 27
+	ResultInsufficientBuffer              Result = 28
+	ResultPurchaseCanceled                Result = 29
+	ResultInvalidGuild                    Result = 30
+	ResultInvalidEvent                    Result = 31
+	ResultInvalidChannel                  Result = 32
+	ResultInvalidOrigin                   Result = 33
+	ResultRateLimited                     Result = 34
+	ResultOAuth2Error                     Result = 35
+	ResultSelectChannelTimeout            Result = 36
+	ResultGetGuildTimeout                 Result = 37
+	ResultSelectVoiceForceRequired        Result = 38
+	ResultCaptureShortcutAlreadyListening Result = 39
+	ResultUnauthorizedForAchievement      Result = 40
+	ResultInvalidGiftCode                 Result = 41
+	ResultPurchaseError                   Result = 42
+	ResultTransactionAborted              Result = 43
+	ResultDrawingInitFailed               Result = 44
+)
+
+// Create flags
+type CreateFlags uint64
+
+const (
+	CreateFlagsDefault          CreateFlags = 0
+	CreateFlagsNoRequireDiscord CreateFlags = 1
+)
+
+// Log levels
+type LogLevel int32
+
+const (
+	LogLevelError LogLevel = 1
+	LogLevelWarn  LogLevel = 2
+	LogLevelInfo  LogLevel = 3
+	LogLevelDebug LogLevel = 4
+)
+
+// CallbackResult represents a callback that has been executed with its result
+type CallbackResult struct {
+	CallbackID string
+	Result     Result
+	Data       interface{}
+	Timestamp  time.Time
+}
+
+// Core represents the main Discord SDK instance
+// Enhanced with robust callback handling and initialization tracking
+type Core struct {
+	ptr          unsafe.Pointer
+	callbackStop chan struct{} // Used to signal the callback goroutine to stop
+	callbackDone chan struct{} // Used to signal when the callback goroutine has stopped
+
+	// Enhanced callback handling
+	callbackQueue   []CallbackResult
+	callbackMutex   sync.RWMutex
+	initialized     bool
+	initMutex       sync.RWMutex
+	callbackID      int64
+	callbackIDMutex sync.Mutex
+}
+
+// Start begins a background goroutine that continuously calls RunCallbacks.
+// This ensures the SDK processes all events and state changes.
+func (c *Core) Start() {
+	if c.callbackStop != nil {
+		return // Already started
+	}
+	c.callbackStop = make(chan struct{})
+	c.callbackDone = make(chan struct{})
+	go func() {
+		defer close(c.callbackDone)
+		for {
+			select {
+			case <-c.callbackStop:
+				return
+			default:
+				result := c.RunCallbacks()
+				if result == ResultOk {
+					// Mark as initialized after first successful callback run
+					c.initMutex.Lock()
+					if !c.initialized {
+						c.initialized = true
+					}
+					c.initMutex.Unlock()
+				}
+				// 50ms is a good balance for responsiveness and CPU usage
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+	}()
+}
+
+// Shutdown stops the callback goroutine and cleans up resources.
+func (c *Core) Shutdown() {
+	if c.callbackStop != nil {
+		close(c.callbackStop)
+		<-c.callbackDone
+		c.callbackStop = nil
+		c.callbackDone = nil
+	}
+	c.Destroy()
+}
+
+// WaitForInitialization blocks until the SDK is fully initialized
+// Returns true if initialized within timeout, false otherwise
+func (c *Core) WaitForInitialization(timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		c.initMutex.RLock()
+		if c.initialized {
+			c.initMutex.RUnlock()
+			return true
+		}
+		c.initMutex.RUnlock()
+		time.Sleep(50 * time.Millisecond)
+	}
+	return false
+}
+
+// WaitForUser blocks until GetCurrentUser returns a valid user or timeout.
+// Returns the user and result code. Use this after Start().
+func (c *Core) WaitForUser(timeout time.Duration) (*User, Result) {
+	// First wait for initialization
+	if !c.WaitForInitialization(timeout) {
+		return nil, ResultInternalError
+	}
+
+	userManager := c.GetUserManager()
+	if userManager == nil {
+		return nil, ResultInternalError
+	}
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		user, result := userManager.GetCurrentUser()
+		if result == ResultOk && user != nil && user.ID != 0 {
+			return user, ResultOk
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return nil, ResultNotFound
+}
+
+// AddCallbackResult adds a callback result to the queue for tracking
+func (c *Core) AddCallbackResult(callbackID string, result Result, data interface{}) {
+	c.callbackMutex.Lock()
+	defer c.callbackMutex.Unlock()
+
+	c.callbackQueue = append(c.callbackQueue, CallbackResult{
+		CallbackID: callbackID,
+		Result:     result,
+		Data:       data,
+		Timestamp:  time.Now(),
+	})
+}
+
+// GetCallbackResult retrieves a specific callback result by ID
+func (c *Core) GetCallbackResult(callbackID string) (CallbackResult, bool) {
+	c.callbackMutex.RLock()
+	defer c.callbackMutex.RUnlock()
+
+	for _, result := range c.callbackQueue {
+		if result.CallbackID == callbackID {
+			return result, true
+		}
+	}
+	return CallbackResult{}, false
+}
+
+// WaitForCallbackResult waits for a specific callback result
+func (c *Core) WaitForCallbackResult(callbackID string, timeout time.Duration) (CallbackResult, bool) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if result, found := c.GetCallbackResult(callbackID); found {
+			return result, true
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return CallbackResult{}, false
+}
+
+// GenerateCallbackID generates a unique callback ID
+func (c *Core) GenerateCallbackID() string {
+	c.callbackIDMutex.Lock()
+	defer c.callbackIDMutex.Unlock()
+	c.callbackID++
+	return fmt.Sprintf("callback_%d", c.callbackID)
+}
+
+// Create creates a new Discord SDK instance
+func Create(clientID int64, flags CreateFlags, events *CoreEvents) (*Core, Result) {
+	// Use the helper function from discordcgo package
+	core, result := dcgo.CoreCreateHelper(clientID, uint64(flags))
+
+	if result != 0 {
+		return nil, Result(result)
+	}
+
+	return &Core{ptr: core}, ResultOk
+}
+
+// Destroy destroys the Discord SDK instance
+func (c *Core) Destroy() {
+	if c.ptr != nil {
+		dcgo.CoreDestroy(c.ptr)
+		c.ptr = nil
+	}
+}
+
+// RunCallbacks runs the Discord SDK callbacks
+func (c *Core) RunCallbacks() Result {
+	if c.ptr == nil {
+		return ResultInternalError
+	}
+	return Result(dcgo.CoreRunCallbacks(c.ptr))
+}
+
+// SetLogHook sets a log hook for the Discord SDK
+func (c *Core) SetLogHook(minLevel LogLevel, hook LogHook) {
+	if c.ptr == nil {
+		return
+	}
+
+	// Call the C wrapper function
+	dcgo.CoreSetLogHook(c.ptr, int32(minLevel), nil, nil)
+
+	// TODO: Implement proper callback support for log hooks
+}
+
+// GetApplicationManager returns the application manager
+func (c *Core) GetApplicationManager() *ApplicationManager {
+	if c.ptr == nil {
+		return nil
+	}
+	appManager := dcgo.CoreGetApplicationManager(c.ptr)
+	if appManager == nil {
+		return nil
+	}
+	return &ApplicationManager{ptr: appManager}
+}
+
+// GetUserManager returns the user manager
+func (c *Core) GetUserManager() *UserManager {
+	if c.ptr == nil {
+		return nil
+	}
+	userManager := dcgo.CoreGetUserManager(c.ptr)
+	if userManager == nil {
+		return nil
+	}
+	return &UserManager{ptr: userManager}
+}
+
+// GetActivityManager returns the activity manager
+func (c *Core) GetActivityManager() *ActivityManager {
+	if c.ptr == nil {
+		return nil
+	}
+	activityManager := dcgo.CoreGetActivityManager(c.ptr)
+	if activityManager == nil {
+		return nil
+	}
+	manager := &ActivityManager{ptr: activityManager}
+	manager.SetCore(c)
+	return manager
+}
+
+// GetLobbyManager returns the lobby manager
+func (c *Core) GetLobbyManager() *LobbyManager {
+	if c.ptr == nil {
+		return nil
+	}
+	lobbyManager := dcgo.CoreGetLobbyManager(c.ptr)
+	if lobbyManager == nil {
+		return nil
+	}
+	return &LobbyManager{manager: lobbyManager}
+}
+
+// GetNetworkManager returns the network manager
+func (c *Core) GetNetworkManager() *NetworkManager {
+	if c.ptr == nil {
+		return nil
+	}
+	networkManager := dcgo.CoreGetNetworkManager(c.ptr)
+	if networkManager == nil {
+		return nil
+	}
+	return &NetworkManager{manager: networkManager}
+}
+
+// GetOverlayManager returns the overlay manager
+func (c *Core) GetOverlayManager() *OverlayManager {
+	if c.ptr == nil {
+		return nil
+	}
+	overlayManager := dcgo.CoreGetOverlayManager(c.ptr)
+	if overlayManager == nil {
+		return nil
+	}
+	return &OverlayManager{manager: overlayManager}
+}
+
+// GetStorageManager returns the storage manager
+func (c *Core) GetStorageManager() *StorageManager {
+	if c.ptr == nil {
+		return nil
+	}
+	storageManager := dcgo.CoreGetStorageManager(c.ptr)
+	if storageManager == nil {
+		return nil
+	}
+	return &StorageManager{manager: storageManager}
+}
+
+// GetStoreManager returns the store manager
+func (c *Core) GetStoreManager() *StoreManager {
+	if c.ptr == nil {
+		return nil
+	}
+	storeManager := dcgo.CoreGetStoreManager(c.ptr)
+	if storeManager == nil {
+		return nil
+	}
+	return &StoreManager{manager: storeManager}
+}
+
+// GetVoiceManager returns the voice manager
+func (c *Core) GetVoiceManager() *VoiceManager {
+	if c.ptr == nil {
+		return nil
+	}
+	voiceManager := dcgo.CoreGetVoiceManager(c.ptr)
+	if voiceManager == nil {
+		return nil
+	}
+	return &VoiceManager{manager: voiceManager}
+}
+
+// GetAchievementManager returns the achievement manager
+func (c *Core) GetAchievementManager() *AchievementManager {
+	if c.ptr == nil {
+		return nil
+	}
+	achievementManager := dcgo.CoreGetAchievementManager(c.ptr)
+	if achievementManager == nil {
+		return nil
+	}
+	return &AchievementManager{manager: achievementManager}
+}
+
+// LogHook represents a log hook function
+type LogHook func(level LogLevel, message string)
