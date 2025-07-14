@@ -548,7 +548,43 @@ func (s *StoreManager) GetSkuAt(index int32) (*Sku, Result) {
 	return convertDiscordSku(sku), ResultOk
 }
 
-// CountEntitlements returns the number of entitlements
+// GetEntitlement gets a single entitlement by ID
+func (s *StoreManager) GetEntitlement(entitlementID int64) (*Entitlement, Result) {
+	if s.manager == nil {
+		return nil, ResultInternalError
+	}
+	ptr := dcgo.MallocDiscordEntitlement()
+	defer dcgo.Free(ptr)
+	res := dcgo.StoreManagerGetEntitlement(s.manager, entitlementID, ptr)
+	if res != 0 {
+		return nil, Result(res)
+	}
+	return &Entitlement{
+		ID:    dcgo.GetDiscordEntitlementID(ptr),
+		Type:  EntitlementType(dcgo.GetDiscordEntitlementType(ptr)),
+		SkuID: dcgo.GetDiscordEntitlementSkuID(ptr),
+	}, ResultOk
+}
+
+// GetEntitlementAt gets an entitlement at index
+func (s *StoreManager) GetEntitlementAt(index int32) (*Entitlement, Result) {
+	if s.manager == nil {
+		return nil, ResultInternalError
+	}
+	ptr := dcgo.MallocDiscordEntitlement()
+	defer dcgo.Free(ptr)
+	res := dcgo.StoreManagerGetEntitlementAt(s.manager, index, ptr)
+	if res != 0 {
+		return nil, Result(res)
+	}
+	return &Entitlement{
+		ID:    dcgo.GetDiscordEntitlementID(ptr),
+		Type:  EntitlementType(dcgo.GetDiscordEntitlementType(ptr)),
+		SkuID: dcgo.GetDiscordEntitlementSkuID(ptr),
+	}, ResultOk
+}
+
+// CountEntitlements gets the count of entitlements
 func (s *StoreManager) CountEntitlements() (int32, Result) {
 	if s.manager == nil {
 		return 0, ResultInternalError
@@ -558,38 +594,14 @@ func (s *StoreManager) CountEntitlements() (int32, Result) {
 	return count, ResultOk
 }
 
-// GetEntitlement retrieves an entitlement by its ID
-func (s *StoreManager) GetEntitlement(entitlementID int64) (*Entitlement, Result) {
-	if s.manager == nil {
-		return nil, ResultInternalError
-	}
-	ent := dcgo.StoreManagerGetEntitlementGo(s.manager, entitlementID)
-	if ent == nil {
-		return nil, ResultInternalError
-	}
-	return convertDiscordEntitlement(ent), ResultOk
-}
-
-// GetEntitlementAt retrieves an entitlement by index
-func (s *StoreManager) GetEntitlementAt(index int32) (*Entitlement, Result) {
-	if s.manager == nil {
-		return nil, ResultInternalError
-	}
-	ent := dcgo.StoreManagerGetEntitlementAtGo(s.manager, index)
-	if ent == nil {
-		return nil, ResultInternalError
-	}
-	return convertDiscordEntitlement(ent), ResultOk
-}
-
 // HasSkuEntitlement checks if a SKU has an entitlement
 func (s *StoreManager) HasSkuEntitlement(skuID int64) (bool, Result) {
 	if s.manager == nil {
 		return false, ResultInternalError
 	}
-	var hasEntitlement bool
-	res := dcgo.StoreManagerHasSkuEntitlement(s.manager, skuID, unsafe.Pointer(&hasEntitlement))
-	return hasEntitlement, Result(res)
+	var has bool
+	res := dcgo.StoreManagerHasSkuEntitlement(s.manager, skuID, unsafe.Pointer(&has))
+	return has, Result(res)
 }
 
 // Helper conversion functions

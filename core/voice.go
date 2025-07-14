@@ -77,3 +77,41 @@ func (v *VoiceManager) SetSelfDeaf(deaf bool) Result {
 	res := dcgo.VoiceManagerSetSelfDeaf(v.manager, deaf)
 	return Result(res)
 }
+
+// IsLocalMute checks if a user is locally muted
+func (v *VoiceManager) IsLocalMute(userID int64) (bool, Result) {
+	if v.manager == nil {
+		return false, ResultInternalError
+	}
+	var mute bool
+	res := dcgo.VoiceManagerIsLocalMute(v.manager, userID, unsafe.Pointer(&mute))
+	return mute, Result(res)
+}
+
+// SetLocalMute sets local mute for a user
+func (v *VoiceManager) SetLocalMute(userID int64, mute bool) Result {
+	if v.manager == nil {
+		return ResultInternalError
+	}
+	res := dcgo.VoiceManagerSetLocalMute(v.manager, userID, mute)
+	return Result(res)
+}
+
+// GetLocalVolume gets the local volume for a user
+func (v *VoiceManager) GetLocalVolume(userID int64) (uint8, Result) {
+	if v.manager == nil {
+		return 0, ResultInternalError
+	}
+	var volume uint8
+	res := dcgo.VoiceManagerGetLocalVolume(v.manager, userID, unsafe.Pointer(&volume))
+	return volume, Result(res)
+}
+
+// SetLocalVolume sets the local volume for a user
+func (v *VoiceManager) SetLocalVolume(userID int64, volume uint8) Result {
+	if v.manager == nil {
+		return ResultInternalError
+	}
+	res := dcgo.VoiceManagerSetLocalVolume(v.manager, userID, volume)
+	return Result(res)
+}

@@ -17,9 +17,10 @@ func (ac *AchievementClient) SetUserAchievement(achievementID int64, percentComp
 	if ac.manager == nil {
 		return fmt.Errorf("achievement manager not available")
 	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return success
+	res := ac.manager.SetUserAchievement(achievementID, percentComplete)
+	if res != core.ResultOk {
+		return fmt.Errorf("failed to set user achievement: %v", res)
+	}
 	return nil
 }
 
@@ -28,10 +29,11 @@ func (ac *AchievementClient) GetUserAchievement(achievementID int64) (*core.User
 	if ac.manager == nil {
 		return nil, fmt.Errorf("achievement manager not available")
 	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return nil
-	return nil, nil
+	ach, res := ac.manager.GetUserAchievement(achievementID)
+	if res != core.ResultOk {
+		return nil, fmt.Errorf("failed to get user achievement: %v", res)
+	}
+	return ach, nil
 }
 
 // GetUserAchievementAt gets a user achievement at index
@@ -39,10 +41,11 @@ func (ac *AchievementClient) GetUserAchievementAt(index int32) (*core.UserAchiev
 	if ac.manager == nil {
 		return nil, fmt.Errorf("achievement manager not available")
 	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return nil
-	return nil, nil
+	ach, res := ac.manager.GetUserAchievementAt(index)
+	if res != core.ResultOk {
+		return nil, fmt.Errorf("failed to get user achievement at index: %v", res)
+	}
+	return ach, nil
 }
 
 // GetUserAchievementCount gets the user achievement count
@@ -50,8 +53,9 @@ func (ac *AchievementClient) GetUserAchievementCount() (int32, error) {
 	if ac.manager == nil {
 		return 0, fmt.Errorf("achievement manager not available")
 	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
+	count, res := ac.manager.GetUserAchievementCount()
+	if res != core.ResultOk {
+		return 0, fmt.Errorf("failed to get user achievement count: %v", res)
+	}
+	return count, nil
 }

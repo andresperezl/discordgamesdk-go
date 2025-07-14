@@ -114,28 +114,17 @@ func (l *LobbyManager) GetLobby(lobbyID int64) (*Lobby, Result) {
 		return nil, ResultInternalError
 	}
 
-	var cLobby struct {
-		ID       int64
-		Type     int32
-		OwnerID  int64
-		Secret   [128]byte
-		Capacity uint32
-		Locked   bool
+	id, typ, ownerID, secret, capacity, locked, res := dcgo.LobbyManagerGetLobbyGo(l.manager, lobbyID)
+	if res != 0 {
+		return nil, Result(res)
 	}
-
-	result := discordcgo.LobbyManagerGetLobby(l.manager, lobbyID, unsafe.Pointer(&cLobby))
-
-	if result != int32(ResultOk) {
-		return nil, Result(result)
-	}
-
 	return &Lobby{
-		ID:       cLobby.ID,
-		Type:     LobbyType(cLobby.Type),
-		OwnerID:  cLobby.OwnerID,
-		Secret:   string(cLobby.Secret[:]),
-		Capacity: cLobby.Capacity,
-		Locked:   cLobby.Locked,
+		ID:       id,
+		Type:     LobbyType(typ),
+		OwnerID:  ownerID,
+		Secret:   secret,
+		Capacity: capacity,
+		Locked:   locked,
 	}, ResultOk
 }
 
