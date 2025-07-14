@@ -10,131 +10,167 @@ import (
 
 func main() {
 	fmt.Println("=== Discord Game SDK Storage Example ===")
-	fmt.Println("This example demonstrates local storage functionality.")
+	fmt.Println("This example demonstrates storage management using the new Go-like Client wrapper.")
 
-	// Initialize Discord SDK
+	// Initialize Discord SDK with the new Client wrapper
 	clientID := int64(1311711649018941501) // Replace with your actual client ID
 	fmt.Printf("Initializing Discord SDK with client ID: %d\n", clientID)
 
-	core, err := discord.Create(clientID, discord.CreateFlagsDefault, nil)
-	if err != discord.ResultOk {
-		log.Fatalf("Failed to create Discord core: %v", err)
+	config := discord.DefaultClientConfig(clientID)
+	client, err := discord.NewClient(config)
+	if err != nil {
+		log.Fatalf("Failed to create Discord client: %v", err)
 	}
-	// Start the callback loop for robust event processing
-	core.Start()
-	defer core.Shutdown()
+	defer client.Close()
 
 	fmt.Println("✓ Discord SDK initialized successfully")
 
-	// Wait for user info to become available (robust pattern)
-	fmt.Println("Waiting for user info...")
-	user, result := core.WaitForUser(5 * time.Second)
-	if result != discord.ResultOk {
-		log.Fatalf("Failed to get current user: %v", result)
+	// Get current user
+	user, err := client.GetCurrentUser(5 * time.Second)
+	if err != nil {
+		log.Fatalf("Failed to get current user: %v", err)
 	}
 	fmt.Printf("✓ Connected as user: %s\n", user.Username)
 
 	// Get storage manager
-	storageManager := core.GetStorageManager()
-	if storageManager == nil {
-		log.Fatal("Failed to get storage manager")
+	storageClient := client.Storage()
+
+	// Test storage operations
+	fmt.Println("\n=== Testing Storage Operations ===")
+
+	// Get storage count
+	fmt.Println("Getting storage count...")
+	count, err := storageClient.Count()
+	if err != nil {
+		fmt.Printf("⚠ Failed to get storage count: %v\n", err)
+	} else {
+		fmt.Printf("✓ Storage count: %d\n", count)
 	}
-	fmt.Println("✓ Storage manager retrieved")
 
-	// Test data to store
+	// Test writing data
+	fmt.Println("\n=== Testing Write Operations ===")
+
 	testData := []byte("Hello from Discord Go SDK!")
-	testKey := "test_key"
+	testFileName := "test_file.txt"
 
-	// Write data to storage
-	fmt.Printf("Writing data to storage with key: %s\n", testKey)
-	result = storageManager.Write(testKey, testData)
-	if result != discord.ResultOk {
-		fmt.Printf("Warning: Failed to write data: %v\n", result)
+	fmt.Printf("Writing data to '%s'...\n", testFileName)
+	err = storageClient.Write(testFileName, testData)
+	if err != nil {
+		fmt.Printf("⚠ Failed to write data: %v\n", err)
 	} else {
 		fmt.Println("✓ Data written successfully")
 	}
 
-	// Check if the data exists
-	exists, result := storageManager.Exists(testKey)
-	if result != discord.ResultOk {
-		fmt.Printf("Warning: Failed to check if data exists: %v\n", result)
+	// Test reading data
+	fmt.Println("\n=== Testing Read Operations ===")
+
+	fmt.Printf("Reading data from '%s'...\n", testFileName)
+	readData, err := storageClient.Read(testFileName)
+	if err != nil {
+		fmt.Printf("⚠ Failed to read data: %v\n", err)
 	} else {
-		if exists {
-			fmt.Println("✓ Data exists in storage")
+		fmt.Printf("✓ Data read successfully: %s\n", string(readData))
+	}
+
+	// Test checking if file exists
+	fmt.Println("\n=== Testing Exists Check ===")
+
+	fmt.Printf("Checking if '%s' exists...\n", testFileName)
+	exists, err := storageClient.Exists(testFileName)
+	if err != nil {
+		fmt.Printf("⚠ Failed to check existence: %v\n", err)
+	} else {
+		fmt.Printf("✓ File exists: %t\n", exists)
+	}
+
+	// Test getting file statistics
+	fmt.Println("\n=== Testing File Statistics ===")
+
+	fmt.Printf("Getting statistics for '%s'...\n", testFileName)
+	stat, err := storageClient.Stat(testFileName)
+	if err != nil {
+		fmt.Printf("⚠ Failed to get file statistics: %v\n", err)
+	} else {
+		fmt.Printf("✓ File statistics:\n")
+		fmt.Printf("  Filename: %s\n", stat.Filename)
+		fmt.Printf("  Size: %d bytes\n", stat.Size)
+		fmt.Printf("  Last Modified: %d\n", stat.LastModified)
+	}
+
+	// Test async operations
+	fmt.Println("\n=== Testing Async Operations ===")
+
+	// Test async read
+	fmt.Println("Testing async read...")
+	dataChan, errChan := storageClient.ReadAsync(testFileName)
+
+	select {
+	case data := <-dataChan:
+		fmt.Printf("✓ Async read successful: %s\n", string(data))
+	case err := <-errChan:
+		fmt.Printf("⚠ Async read failed: %v\n", err)
+	case <-time.After(3 * time.Second):
+		fmt.Println("⚠ Async read timed out")
+	}
+
+	// Test async write
+	fmt.Println("Testing async write...")
+	writeData := []byte("Async write test from Discord Go SDK!")
+	writeErrChan := storageClient.WriteAsync("async_test.txt", writeData)
+
+	select {
+	case err := <-writeErrChan:
+		if err != nil {
+			fmt.Printf("⚠ Async write failed: %v\n", err)
 		} else {
-			fmt.Println("✗ Data does not exist in storage")
+			fmt.Println("✓ Async write successful")
 		}
+	case <-time.After(3 * time.Second):
+		fmt.Println("⚠ Async write timed out")
 	}
 
-	// Read data from storage
-	fmt.Printf("Reading data from storage with key: %s\n", testKey)
-	readData := make([]byte, len(testData))
-	bytesRead, result := storageManager.Read(testKey, readData)
-	if result != discord.ResultOk {
-		fmt.Printf("Warning: Failed to read data: %v\n", result)
+	// Test getting storage path
+	fmt.Println("\n=== Testing Storage Path ===")
+
+	path, err := storageClient.GetPath()
+	if err != nil {
+		fmt.Printf("⚠ Failed to get storage path: %v\n", err)
 	} else {
-		fmt.Println("✓ Data read successfully")
-		fmt.Printf("  Original data: %s\n", string(testData))
-		fmt.Printf("  Read data: %s\n", string(readData[:bytesRead]))
-		if string(testData) == string(readData[:bytesRead]) {
-			fmt.Println("✓ Data matches!")
-		} else {
-			fmt.Println("✗ Data does not match!")
-		}
+		fmt.Printf("✓ Storage path: %s\n", path)
 	}
 
-	// Get storage statistics
-	count, result := storageManager.Count()
-	if result != discord.ResultOk {
-		fmt.Printf("Warning: Failed to get storage count: %v\n", result)
+	// Test deleting file
+	fmt.Println("\n=== Testing Delete Operation ===")
+
+	fmt.Printf("Deleting '%s'...\n", testFileName)
+	err = storageClient.Delete(testFileName)
+	if err != nil {
+		fmt.Printf("⚠ Failed to delete file: %v\n", err)
 	} else {
-		fmt.Printf("Total files in storage: %d\n", count)
+		fmt.Println("✓ File deleted successfully")
 	}
 
-	// List storage files (if any)
-	if count > 0 {
-		fmt.Println("Storage files:")
-		for i := int32(0); i < count; i++ {
-			stat, result := storageManager.StatAt(i)
-			if result == discord.ResultOk {
-				fmt.Printf("  %d: %s (%d bytes, modified: %d)\n",
-					i, stat.Filename, stat.Size, stat.LastModified)
-			}
-		}
-	}
-
-	// Get storage path
-	path, result := storageManager.GetPath()
-	if result == discord.ResultOk {
-		fmt.Printf("Storage path: %s\n", path)
+	// Verify deletion
+	fmt.Printf("Checking if '%s' still exists...\n", testFileName)
+	exists, err = storageClient.Exists(testFileName)
+	if err != nil {
+		fmt.Printf("⚠ Failed to check existence after deletion: %v\n", err)
 	} else {
-		fmt.Printf("Warning: Failed to get storage path: %v\n", result)
+		fmt.Printf("✓ File exists after deletion: %t\n", exists)
 	}
 
-	// Let the callback loop process any pending operations
-	fmt.Println("Processing storage operations...")
+	// Let the client run for a moment to process any remaining events
+	fmt.Println("Processing SDK events...")
 	time.Sleep(500 * time.Millisecond)
 
-	fmt.Println("\n🎉 Storage example completed!")
+	fmt.Println("\n🎉 Storage example completed successfully!")
 	fmt.Println("\nThis demonstrates:")
-	fmt.Println("- Writing data to local storage")
-	fmt.Println("- Reading data from local storage")
-	fmt.Println("- Checking if data exists")
-	fmt.Println("- Getting storage statistics")
-	fmt.Println("- Listing storage files")
-	fmt.Println("- Getting storage path")
-
-	fmt.Println("\nPress Enter to delete test data and exit...")
-	fmt.Scanln()
-
-	// Delete the test data
-	result = storageManager.Delete(testKey)
-	if result != discord.ResultOk {
-		fmt.Printf("Warning: Failed to delete data: %v\n", result)
-	} else {
-		fmt.Println("✓ Test data deleted successfully")
-	}
-
-	// Let the callback loop process the deletion
-	time.Sleep(500 * time.Millisecond)
+	fmt.Println("- SDK initialization with the new Client wrapper")
+	fmt.Println("- Storage read/write operations")
+	fmt.Println("- File existence checking")
+	fmt.Println("- File statistics")
+	fmt.Println("- Async operations with channels")
+	fmt.Println("- File deletion")
+	fmt.Println("- Go-like error handling")
+	fmt.Println("- Enhanced storage management")
 }

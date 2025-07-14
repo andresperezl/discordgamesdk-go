@@ -80,6 +80,104 @@ const (
 	ResultDrawingInitFailed               Result = 44
 )
 
+// String returns a string representation of the Result
+func (r Result) String() string {
+	switch r {
+	case ResultOk:
+		return "ResultOk(0)"
+	case ResultServiceUnavailable:
+		return "ResultServiceUnavailable(1)"
+	case ResultInvalidVersion:
+		return "ResultInvalidVersion(2)"
+	case ResultLockFailed:
+		return "ResultLockFailed(3)"
+	case ResultInternalError:
+		return "ResultInternalError(4)"
+	case ResultInvalidPayload:
+		return "ResultInvalidPayload(5)"
+	case ResultInvalidCommand:
+		return "ResultInvalidCommand(6)"
+	case ResultInvalidPermissions:
+		return "ResultInvalidPermissions(7)"
+	case ResultNotFetched:
+		return "ResultNotFetched(8)"
+	case ResultNotFound:
+		return "ResultNotFound(9)"
+	case ResultConflict:
+		return "ResultConflict(10)"
+	case ResultInvalidSecret:
+		return "ResultInvalidSecret(11)"
+	case ResultInvalidJoinSecret:
+		return "ResultInvalidJoinSecret(12)"
+	case ResultNoEligibleActivity:
+		return "ResultNoEligibleActivity(13)"
+	case ResultInvalidInvite:
+		return "ResultInvalidInvite(14)"
+	case ResultNotAuthenticated:
+		return "ResultNotAuthenticated(15)"
+	case ResultInvalidAccessToken:
+		return "ResultInvalidAccessToken(16)"
+	case ResultApplicationMismatch:
+		return "ResultApplicationMismatch(17)"
+	case ResultInvalidDataUrl:
+		return "ResultInvalidDataUrl(18)"
+	case ResultInvalidBase64:
+		return "ResultInvalidBase64(19)"
+	case ResultNotFiltered:
+		return "ResultNotFiltered(20)"
+	case ResultLobbyFull:
+		return "ResultLobbyFull(21)"
+	case ResultInvalidLobbySecret:
+		return "ResultInvalidLobbySecret(22)"
+	case ResultInvalidFilename:
+		return "ResultInvalidFilename(23)"
+	case ResultInvalidFileSize:
+		return "ResultInvalidFileSize(24)"
+	case ResultInvalidEntitlement:
+		return "ResultInvalidEntitlement(25)"
+	case ResultNotInstalled:
+		return "ResultNotInstalled(26)"
+	case ResultNotRunning:
+		return "ResultNotRunning(27)"
+	case ResultInsufficientBuffer:
+		return "ResultInsufficientBuffer(28)"
+	case ResultPurchaseCanceled:
+		return "ResultPurchaseCanceled(29)"
+	case ResultInvalidGuild:
+		return "ResultInvalidGuild(30)"
+	case ResultInvalidEvent:
+		return "ResultInvalidEvent(31)"
+	case ResultInvalidChannel:
+		return "ResultInvalidChannel(32)"
+	case ResultInvalidOrigin:
+		return "ResultInvalidOrigin(33)"
+	case ResultRateLimited:
+		return "ResultRateLimited(34)"
+	case ResultOAuth2Error:
+		return "ResultOAuth2Error(35)"
+	case ResultSelectChannelTimeout:
+		return "ResultSelectChannelTimeout(36)"
+	case ResultGetGuildTimeout:
+		return "ResultGetGuildTimeout(37)"
+	case ResultSelectVoiceForceRequired:
+		return "ResultSelectVoiceForceRequired(38)"
+	case ResultCaptureShortcutAlreadyListening:
+		return "ResultCaptureShortcutAlreadyListening(39)"
+	case ResultUnauthorizedForAchievement:
+		return "ResultUnauthorizedForAchievement(40)"
+	case ResultInvalidGiftCode:
+		return "ResultInvalidGiftCode(41)"
+	case ResultPurchaseError:
+		return "ResultPurchaseError(42)"
+	case ResultTransactionAborted:
+		return "ResultTransactionAborted(43)"
+	case ResultDrawingInitFailed:
+		return "ResultDrawingInitFailed(44)"
+	default:
+		return fmt.Sprintf("ResultUnknown(%d)", int32(r))
+	}
+}
+
 // Create flags
 type CreateFlags uint64
 

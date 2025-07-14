@@ -9,78 +9,70 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Discord Game SDK Simple Activity Test ===")
+	fmt.Println("=== Discord Game SDK Simple Activity Example ===")
+	fmt.Println("This example demonstrates simple activity management using the new Go-like Client wrapper.")
 
-	// Initialize Discord SDK
-	clientID := int64(1311711649018941501)
-	core, err := discord.Create(clientID, discord.CreateFlagsDefault, nil)
-	if err != discord.ResultOk {
-		log.Fatalf("Failed to create Discord core: %v", err)
+	// Initialize Discord SDK with the new Client wrapper
+	clientID := int64(1311711649018941501) // Replace with your actual client ID
+	fmt.Printf("Initializing Discord SDK with client ID: %d\n", clientID)
+
+	config := discord.DefaultClientConfig(clientID)
+	client, err := discord.NewClient(config)
+	if err != nil {
+		log.Fatalf("Failed to create Discord client: %v", err)
 	}
-	// Start the callback loop for robust event processing
-	core.Start()
-	defer core.Shutdown()
+	defer client.Close()
 
 	fmt.Println("✓ Discord SDK initialized successfully")
 
-	// Wait for user info to become available (robust pattern)
-	fmt.Println("Waiting for user info...")
-	user, result := core.WaitForUser(5 * time.Second)
-	if result != discord.ResultOk {
-		log.Fatalf("Failed to get current user: %v", result)
+	// Get current user
+	user, err := client.GetCurrentUser(5 * time.Second)
+	if err != nil {
+		log.Fatalf("Failed to get current user: %v", err)
 	}
 	fmt.Printf("✓ Connected as user: %s\n", user.Username)
 
 	// Get activity manager
-	activityManager := core.GetActivityManager()
-	if activityManager == nil {
-		log.Fatal("Failed to get activity manager")
+	activityClient := client.Activity()
+
+	// Create a simple activity using the builder pattern
+	fmt.Println("\n=== Creating Simple Activity ===")
+
+	activity := discord.NewActivity().
+		SetType(discord.ActivityTypePlaying).
+		SetApplicationID(clientID).
+		SetName("Discord Go SDK").
+		SetState("Simple Example").
+		SetDetails("Testing simple activity").
+		Build()
+
+	// Set the activity
+	fmt.Println("Setting simple activity...")
+	err = activityClient.SetActivity(activity)
+	if err != nil {
+		log.Fatalf("Failed to set activity: %v", err)
 	}
-	fmt.Println("✓ Activity manager retrieved")
+	fmt.Println("✓ Simple activity set successfully")
 
-	// Create a simple activity without complex assets
-	activity := discord.Activity{
-		Type:          discord.ActivityTypePlaying,
-		ApplicationID: clientID,
-		Name:          "Discord Go SDK Test",
-		State:         "Testing",
-		Details:       "Simple activity test",
-		Timestamps: discord.ActivityTimestamps{
-			Start: time.Now().Unix(),
-		},
-		Instance: true,
-	}
-
-	// Update the activity
-	fmt.Println("Updating activity...")
-	activityManager.UpdateActivity(&activity, func(result discord.Result) {
-		fmt.Printf("Activity update callback result: %v\n", result)
-		if result == discord.ResultOk {
-			fmt.Println("✓ Activity updated successfully")
-		} else {
-			fmt.Printf("✗ Activity update failed: %v\n", result)
-		}
-	})
-
-	// Let the callback loop process the update
-	fmt.Println("Processing activity update...")
-	time.Sleep(2 * time.Second)
-
-	fmt.Println("\nPress Enter to clear activity and exit...")
-	fmt.Scanln()
+	// Wait a moment to see the activity
+	time.Sleep(3 * time.Second)
 
 	// Clear the activity
-	activityManager.ClearActivity(func(result discord.Result) {
-		fmt.Printf("Activity clear callback result: %v\n", result)
-		if result == discord.ResultOk {
-			fmt.Println("✓ Activity cleared successfully")
-		} else {
-			fmt.Printf("✗ Activity clear failed: %v\n", result)
-		}
-	})
+	fmt.Println("\n=== Clearing Activity ===")
+	err = activityClient.ClearActivity()
+	if err != nil {
+		log.Fatalf("Failed to clear activity: %v", err)
+	}
+	fmt.Println("✓ Activity cleared successfully")
 
-	// Let the callback loop process the clear
-	time.Sleep(1 * time.Second)
+	// Let the client run for a moment to process any remaining events
+	fmt.Println("Processing SDK events...")
+	time.Sleep(500 * time.Millisecond)
 
-	fmt.Println("Test completed!")
+	fmt.Println("\n🎉 Simple activity example completed successfully!")
+	fmt.Println("\nThis demonstrates:")
+	fmt.Println("- SDK initialization with the new Client wrapper")
+	fmt.Println("- Simple activity creation with the builder pattern")
+	fmt.Println("- Go-like error handling")
+	fmt.Println("- Clean activity management")
 }
