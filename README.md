@@ -34,11 +34,53 @@ The bindings use a two-layer approach:
 
 ## Installation
 
+### Option 1: Automatic SDK Download (Recommended)
+
+Use the provided helper scripts to automatically download and extract the Discord Game SDK:
+
+**Windows:**
+```powershell
+# PowerShell
+.\scripts\download_sdk.ps1
+
+# Or batch file
+scripts\download_sdk.bat
+```
+
+**Linux/macOS:**
+```bash
+# Make executable (first time only)
+chmod +x scripts/download_sdk.sh
+
+# Run the script
+./scripts/download_sdk.sh
+```
+
+**Cross-platform (Go):**
+```bash
+go run scripts/download_sdk.go
+```
+
+**Using Makefile (recommended):**
+```bash
+# Download SDK files
+make sdk-download
+
+# Check if SDK files are present
+make sdk-check
+
+# Quick start (download SDK and build examples)
+make quickstart
+```
+
+### Option 2: Manual Installation
+
 1. Download the Discord Game SDK from the [Discord Developer Portal](https://discord.com/developers/docs/game-sdk/sdk-starter-guide)
 2. Place the SDK files in the `lib/` directory:
-   - `discord_game_sdk.dll` (Windows)
+   - `discord_game_sdk.dll` (Windows x86_64)
+   - `discord_game_sdk.dll.lib` (Windows x86_64)
+   - `discord_game_sdk.so` (Linux x86_64)
    - `discord_game_sdk.h`
-   - `discord_game_sdk.lib` (Windows)
 
 3. Install the Go package:
 ```bash
@@ -153,7 +195,13 @@ go build .
 
 # Build an example
 go build ./examples/test_basic.go
+
+# Using Makefile (recommended)
+make build
+make examples
 ```
+
+**Note for Windows users:** The build process automatically copies the required DLL files to the output directory. If you're building manually, make sure to copy `lib/discord_game_sdk.dll` to the same directory as your executable.
 
 ## Wrapper Approach Benefits
 
