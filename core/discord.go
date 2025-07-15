@@ -24,6 +24,17 @@ type AchievementManager struct {
 	manager unsafe.Pointer
 }
 
+// ImageManager provides access to image-related functionality
+// Similar to StoreManager, VoiceManager, etc.
+type ImageManager struct {
+	manager unsafe.Pointer
+}
+
+// RelationshipManager provides access to relationship-related functionality
+type RelationshipManager struct {
+	manager unsafe.Pointer
+}
+
 // Version constants
 const (
 	DiscordVersion = 3 // Should match DISCORD_VERSION in the SDK
@@ -509,6 +520,47 @@ func (c *Core) GetAchievementManager() *AchievementManager {
 	return &AchievementManager{manager: achievementManager}
 }
 
+// GetImageManager returns the image manager
+func (c *Core) GetImageManager() *ImageManager {
+	if c.ptr == nil {
+		return nil
+	}
+	imgManager := dcgo.CoreGetImageManager(c.ptr)
+	if imgManager == nil {
+		return nil
+	}
+	return &ImageManager{manager: imgManager}
+}
+
+// GetRelationshipManager returns the relationship manager
+func (c *Core) GetRelationshipManager() *RelationshipManager {
+	if c.ptr == nil {
+		return nil
+	}
+	relManager := dcgo.CoreGetRelationshipManager(c.ptr)
+	if relManager == nil {
+		return nil
+	}
+	return &RelationshipManager{manager: relManager}
+}
+
+// Fetch fetches an image asynchronously
+func (im *ImageManager) Fetch(handle ImageHandle, refresh bool, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	dcgo.ImageManagerFetch(im.manager, unsafe.Pointer(&handle), refresh, callbackData, callback)
+}
+
+// GetDimensions retrieves the dimensions of an image
+func (im *ImageManager) GetDimensions(handle ImageHandle) (ImageDimensions, Result) {
+	var dims ImageDimensions
+	res := dcgo.ImageManagerGetDimensions(im.manager, unsafe.Pointer(&handle), unsafe.Pointer(&dims))
+	return dims, Result(res)
+}
+
+// GetData retrieves the raw image data
+func (im *ImageManager) GetData(handle ImageHandle, data []byte) Result {
+	return Result(dcgo.ImageManagerGetData(im.manager, unsafe.Pointer(&handle), unsafe.Pointer(&data[0]), uint32(len(data))))
+}
+
 // LogHook represents a log hook function
 type LogHook func(level LogLevel, message string)
 
@@ -629,4 +681,38 @@ func convertDiscordEntitlement(ent *dcgo.DiscordEntitlement) *Entitlement {
 		Type:  EntitlementType(dcgo.GetDiscordEntitlementType(unsafe.Pointer(ent))),
 		SkuID: int64(dcgo.GetDiscordEntitlementSkuID(unsafe.Pointer(ent))),
 	}
+}
+
+// RelationshipManager methods
+
+// Filter filters relationships using a callback function
+func (rm *RelationshipManager) Filter(filterData unsafe.Pointer, filter unsafe.Pointer) {
+	dcgo.RelationshipManagerFilter(rm.manager, filterData, filter)
+}
+
+// Count returns the number of relationships
+func (rm *RelationshipManager) Count() (int32, Result) {
+	var count int32
+	res := dcgo.RelationshipManagerCount(rm.manager, unsafe.Pointer(&count))
+	return count, Result(res)
+}
+
+// Get retrieves a relationship by user ID
+func (rm *RelationshipManager) Get(userID int64) (*Relationship, Result) {
+	var rel Relationship
+	res := dcgo.RelationshipManagerGet(rm.manager, userID, unsafe.Pointer(&rel))
+	if res != 0 {
+		return nil, Result(res)
+	}
+	return &rel, ResultOk
+}
+
+// GetAt retrieves a relationship by index
+func (rm *RelationshipManager) GetAt(index uint32) (*Relationship, Result) {
+	var rel Relationship
+	res := dcgo.RelationshipManagerGetAt(rm.manager, index, unsafe.Pointer(&rel))
+	if res != 0 {
+		return nil, Result(res)
+	}
+	return &rel, ResultOk
 }

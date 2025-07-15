@@ -57,8 +57,13 @@ struct IDiscordAchievementManager* discord_core_get_achievement_manager(void* co
     return ((struct IDiscordCore*)core)->get_achievement_manager((struct IDiscordCore*)core);
 }
 
+struct IDiscordImageManager* discord_core_get_image_manager(void* core) {
+    return ((struct IDiscordCore*)core)->get_image_manager((struct IDiscordCore*)core);
+}
 
-
+struct IDiscordRelationshipManager* discord_core_get_relationship_manager(void* core) {
+    return ((struct IDiscordCore*)core)->get_relationship_manager((struct IDiscordCore*)core);
+}
 
 
 // Application manager wrappers
@@ -480,4 +485,100 @@ enum EDiscordResult discord_achievement_manager_get_user_achievement(struct IDis
 
 enum EDiscordResult discord_achievement_manager_get_user_achievement_at(struct IDiscordAchievementManager* manager, int32_t index, struct DiscordUserAchievement* user_achievement) {
     return manager->get_user_achievement_at(manager, index, user_achievement);
+} 
+
+// Image manager wrappers
+void discord_image_manager_fetch(struct IDiscordImageManager* manager, struct DiscordImageHandle handle, bool refresh, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result, struct DiscordImageHandle handle_result)) {
+    manager->fetch(manager, handle, refresh, callback_data, callback);
+}
+enum EDiscordResult discord_image_manager_get_dimensions(struct IDiscordImageManager* manager, struct DiscordImageHandle handle, struct DiscordImageDimensions* dimensions) {
+    return manager->get_dimensions(manager, handle, dimensions);
+}
+enum EDiscordResult discord_image_manager_get_data(struct IDiscordImageManager* manager, struct DiscordImageHandle handle, uint8_t* data, uint32_t data_length) {
+    return manager->get_data(manager, handle, data, data_length);
+} 
+
+// Relationship manager wrappers
+void discord_relationship_manager_filter(struct IDiscordRelationshipManager* manager, void* filter_data, bool (*filter)(void* filter_data, struct DiscordRelationship* relationship)) {
+    manager->filter(manager, filter_data, filter);
+}
+enum EDiscordResult discord_relationship_manager_count(struct IDiscordRelationshipManager* manager, int32_t* count) {
+    return manager->count(manager, count);
+}
+enum EDiscordResult discord_relationship_manager_get(struct IDiscordRelationshipManager* manager, DiscordUserId user_id, struct DiscordRelationship* relationship) {
+    return manager->get(manager, user_id, relationship);
+}
+enum EDiscordResult discord_relationship_manager_get_at(struct IDiscordRelationshipManager* manager, uint32_t index, struct DiscordRelationship* relationship) {
+    return manager->get_at(manager, index, relationship);
+} 
+
+// Additional missing lobby manager wrappers
+void discord_lobby_manager_connect_lobby_with_activity_secret(struct IDiscordLobbyManager* manager, DiscordLobbySecret activity_secret, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result, struct DiscordLobby* lobby)) {
+    manager->connect_lobby_with_activity_secret(manager, activity_secret, callback_data, callback);
+}
+
+enum EDiscordResult discord_lobby_manager_get_member_update_transaction(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, struct IDiscordLobbyMemberTransaction** transaction) {
+    return manager->get_member_update_transaction(manager, lobby_id, user_id, transaction);
+}
+
+enum EDiscordResult discord_lobby_manager_get_lobby_metadata_value(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, const char* key, char* value) {
+    DiscordMetadataKey key_arr;
+    strncpy(key_arr, key, sizeof(DiscordMetadataKey));
+    key_arr[sizeof(DiscordMetadataKey)-1] = '\0';
+    return manager->get_lobby_metadata_value(manager, lobby_id, key_arr, (DiscordMetadataValue*)value);
+}
+
+enum EDiscordResult discord_lobby_manager_get_lobby_metadata_key(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, int32_t index, char* key) {
+    return manager->get_lobby_metadata_key(manager, lobby_id, index, (DiscordMetadataKey*)key);
+}
+
+enum EDiscordResult discord_lobby_manager_lobby_metadata_count(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, int32_t* count) {
+    return manager->lobby_metadata_count(manager, lobby_id, count);
+}
+
+enum EDiscordResult discord_lobby_manager_member_count(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, int32_t* count) {
+    return manager->member_count(manager, lobby_id, count);
+}
+
+enum EDiscordResult discord_lobby_manager_get_member_user_id(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, int32_t index, DiscordUserId* user_id) {
+    return manager->get_member_user_id(manager, lobby_id, index, user_id);
+}
+
+enum EDiscordResult discord_lobby_manager_get_member_user(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, struct DiscordUser* user) {
+    return manager->get_member_user(manager, lobby_id, user_id, user);
+}
+
+enum EDiscordResult discord_lobby_manager_get_member_metadata_value(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, const char* key, char* value) {
+    DiscordMetadataKey key_arr;
+    strncpy(key_arr, key, sizeof(DiscordMetadataKey));
+    key_arr[sizeof(DiscordMetadataKey)-1] = '\0';
+    return manager->get_member_metadata_value(manager, lobby_id, user_id, key_arr, (DiscordMetadataValue*)value);
+}
+
+enum EDiscordResult discord_lobby_manager_get_member_metadata_key(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, int32_t index, char* key) {
+    return manager->get_member_metadata_key(manager, lobby_id, user_id, index, (DiscordMetadataKey*)key);
+}
+
+enum EDiscordResult discord_lobby_manager_member_metadata_count(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, int32_t* count) {
+    return manager->member_metadata_count(manager, lobby_id, user_id, count);
+}
+
+void discord_lobby_manager_update_member(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, struct IDiscordLobbyMemberTransaction* transaction, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result)) {
+    manager->update_member(manager, lobby_id, user_id, transaction, callback_data, callback);
+}
+
+enum EDiscordResult discord_lobby_manager_get_search_query(struct IDiscordLobbyManager* manager, struct IDiscordLobbySearchQuery** query) {
+    return manager->get_search_query(manager, query);
+}
+
+void discord_lobby_manager_search(struct IDiscordLobbyManager* manager, struct IDiscordLobbySearchQuery* query, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result)) {
+    manager->search(manager, query, callback_data, callback);
+}
+
+void discord_lobby_manager_lobby_count(struct IDiscordLobbyManager* manager, int32_t* count) {
+    manager->lobby_count(manager, count);
+}
+
+enum EDiscordResult discord_lobby_manager_get_lobby_id(struct IDiscordLobbyManager* manager, int32_t index, DiscordLobbyId* lobby_id) {
+    return manager->get_lobby_id(manager, index, lobby_id);
 } 

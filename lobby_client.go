@@ -2,6 +2,7 @@ package discord
 
 import (
 	"fmt"
+	"unsafe"
 
 	core "github.com/andresperezl/discordctl/core"
 )
@@ -9,22 +10,33 @@ import (
 // LobbyClient provides Go-like interfaces for lobby management
 type LobbyClient struct {
 	manager *core.LobbyManager
-	core    *core.Core
+	core    *core.Core // Added to match usage in client.go
 }
 
-// CreateLobby creates a lobby asynchronously and returns a channel for the result
-func (lc *LobbyClient) CreateLobby(transaction *core.LobbyTransaction) (<-chan *core.Lobby, <-chan error) {
+func NewLobbyClient(core *core.Core) *LobbyClient {
+	return &LobbyClient{manager: core.GetLobbyManager(), core: core}
+}
+
+func (c *LobbyClient) ConnectLobbyWithActivitySecret(activitySecret string, callbackData, callback unsafe.Pointer) {
+	c.manager.ConnectLobbyWithActivitySecret(activitySecret, callbackData, callback)
+}
+
+func (c *LobbyClient) GetMemberUpdateTransaction(lobbyID, userID int64) unsafe.Pointer {
+	return c.manager.GetMemberUpdateTransaction(lobbyID, userID)
+}
+
+func (c *LobbyClient) CreateLobby(transaction *core.LobbyTransaction) (<-chan *core.Lobby, <-chan error) {
 	lobbyChan := make(chan *core.Lobby, 1)
 	errChan := make(chan error, 1)
 
-	if lc.manager == nil {
+	if c.manager == nil {
 		errChan <- fmt.Errorf("lobby manager not available")
 		close(lobbyChan)
 		close(errChan)
 		return lobbyChan, errChan
 	}
 
-	lc.manager.CreateLobby(transaction, func(result core.Result, lobby *core.Lobby) {
+	c.manager.CreateLobby(transaction, func(result core.Result, lobby *core.Lobby) {
 		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to create lobby: %v", result)
 			close(lobbyChan)
@@ -39,19 +51,18 @@ func (lc *LobbyClient) CreateLobby(transaction *core.LobbyTransaction) (<-chan *
 	return lobbyChan, errChan
 }
 
-// ConnectLobby connects to a lobby asynchronously and returns a channel for the result
-func (lc *LobbyClient) ConnectLobby(lobbyID int64, secret string) (<-chan *core.Lobby, <-chan error) {
+func (c *LobbyClient) ConnectLobby(lobbyID int64, secret string) (<-chan *core.Lobby, <-chan error) {
 	lobbyChan := make(chan *core.Lobby, 1)
 	errChan := make(chan error, 1)
 
-	if lc.manager == nil {
+	if c.manager == nil {
 		errChan <- fmt.Errorf("lobby manager not available")
 		close(lobbyChan)
 		close(errChan)
 		return lobbyChan, errChan
 	}
 
-	lc.manager.ConnectLobby(lobbyID, secret, func(result core.Result, lobby *core.Lobby) {
+	c.manager.ConnectLobby(lobbyID, secret, func(result core.Result, lobby *core.Lobby) {
 		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to connect to lobby: %v", result)
 			close(lobbyChan)
@@ -66,17 +77,16 @@ func (lc *LobbyClient) ConnectLobby(lobbyID int64, secret string) (<-chan *core.
 	return lobbyChan, errChan
 }
 
-// DisconnectLobby disconnects from a lobby asynchronously and returns a channel for the result
-func (lc *LobbyClient) DisconnectLobby(lobbyID int64) <-chan error {
+func (c *LobbyClient) DisconnectLobby(lobbyID int64) <-chan error {
 	errChan := make(chan error, 1)
 
-	if lc.manager == nil {
+	if c.manager == nil {
 		errChan <- fmt.Errorf("lobby manager not available")
 		close(errChan)
 		return errChan
 	}
 
-	lc.manager.DisconnectLobby(lobbyID, func(result core.Result) {
+	c.manager.DisconnectLobby(lobbyID, func(result core.Result) {
 		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to disconnect from lobby: %v", result)
 		} else {
@@ -88,9 +98,8 @@ func (lc *LobbyClient) DisconnectLobby(lobbyID int64) <-chan error {
 	return errChan
 }
 
-// GetLobbyActivitySecret gets the lobby activity secret
-func (lc *LobbyClient) GetLobbyActivitySecret(lobbyID int64) (string, error) {
-	if lc.manager == nil {
+func (c *LobbyClient) GetLobbyActivitySecret(lobbyID int64) (string, error) {
+	if c.manager == nil {
 		return "", fmt.Errorf("lobby manager not available")
 	}
 
@@ -99,20 +108,8 @@ func (lc *LobbyClient) GetLobbyActivitySecret(lobbyID int64) (string, error) {
 	return "", nil
 }
 
-// GetLobbyMetadataValue gets a lobby metadata value
-func (lc *LobbyClient) GetLobbyMetadataValue(lobbyID int64, key string) (string, error) {
-	if lc.manager == nil {
-		return "", fmt.Errorf("lobby manager not available")
-	}
-
-	// This would need to be implemented in the C wrapper
-	// For now, return empty string
-	return "", nil
-}
-
-// SetLobbyMetadata sets lobby metadata
-func (lc *LobbyClient) SetLobbyMetadata(lobbyID int64, key, value string) error {
-	if lc.manager == nil {
+func (c *LobbyClient) SetLobbyMetadata(lobbyID int64, key, value string) error {
+	if c.manager == nil {
 		return fmt.Errorf("lobby manager not available")
 	}
 
@@ -121,9 +118,8 @@ func (lc *LobbyClient) SetLobbyMetadata(lobbyID int64, key, value string) error 
 	return nil
 }
 
-// DeleteLobbyMetadata deletes lobby metadata
-func (lc *LobbyClient) DeleteLobbyMetadata(lobbyID int64, key string) error {
-	if lc.manager == nil {
+func (c *LobbyClient) DeleteLobbyMetadata(lobbyID int64, key string) error {
+	if c.manager == nil {
 		return fmt.Errorf("lobby manager not available")
 	}
 
@@ -132,9 +128,8 @@ func (lc *LobbyClient) DeleteLobbyMetadata(lobbyID int64, key string) error {
 	return nil
 }
 
-// GetLobbyMetadataCount gets the lobby metadata count
-func (lc *LobbyClient) GetLobbyMetadataCount(lobbyID int64) (int32, error) {
-	if lc.manager == nil {
+func (c *LobbyClient) GetLobbyMetadataCount(lobbyID int64) (int32, error) {
+	if c.manager == nil {
 		return 0, fmt.Errorf("lobby manager not available")
 	}
 
@@ -143,9 +138,8 @@ func (lc *LobbyClient) GetLobbyMetadataCount(lobbyID int64) (int32, error) {
 	return 0, nil
 }
 
-// GetLobbyMetadataKeyByIndex gets a lobby metadata key by index
-func (lc *LobbyClient) GetLobbyMetadataKeyByIndex(lobbyID int64, index int32) (string, error) {
-	if lc.manager == nil {
+func (c *LobbyClient) GetLobbyMetadataKeyByIndex(lobbyID int64, index int32) (string, error) {
+	if c.manager == nil {
 		return "", fmt.Errorf("lobby manager not available")
 	}
 
@@ -154,9 +148,8 @@ func (lc *LobbyClient) GetLobbyMetadataKeyByIndex(lobbyID int64, index int32) (s
 	return "", nil
 }
 
-// GetLobbyMemberCount gets the lobby member count
-func (lc *LobbyClient) GetLobbyMemberCount(lobbyID int64) (int32, error) {
-	if lc.manager == nil {
+func (c *LobbyClient) GetLobbyMemberCount(lobbyID int64) (int32, error) {
+	if c.manager == nil {
 		return 0, fmt.Errorf("lobby manager not available")
 	}
 
@@ -165,9 +158,8 @@ func (lc *LobbyClient) GetLobbyMemberCount(lobbyID int64) (int32, error) {
 	return 0, nil
 }
 
-// GetLobbyMemberUserId gets a lobby member user ID
-func (lc *LobbyClient) GetLobbyMemberUserId(lobbyID int64, index int32) (int64, error) {
-	if lc.manager == nil {
+func (c *LobbyClient) GetLobbyMemberUserId(lobbyID int64, index int32) (int64, error) {
+	if c.manager == nil {
 		return 0, fmt.Errorf("lobby manager not available")
 	}
 
@@ -176,9 +168,8 @@ func (lc *LobbyClient) GetLobbyMemberUserId(lobbyID int64, index int32) (int64, 
 	return 0, nil
 }
 
-// GetLobbyMemberUser gets a lobby member user
-func (lc *LobbyClient) GetLobbyMemberUser(lobbyID int64, userID int64) (*core.User, error) {
-	if lc.manager == nil {
+func (c *LobbyClient) GetLobbyMemberUser(lobbyID int64, userID int64) (*core.User, error) {
+	if c.manager == nil {
 		return nil, fmt.Errorf("lobby manager not available")
 	}
 
@@ -187,9 +178,8 @@ func (lc *LobbyClient) GetLobbyMemberUser(lobbyID int64, userID int64) (*core.Us
 	return nil, nil
 }
 
-// GetLobbyMemberMetadataValue gets a lobby member metadata value
-func (lc *LobbyClient) GetLobbyMemberMetadataValue(lobbyID int64, userID int64, key string) (string, error) {
-	if lc.manager == nil {
+func (c *LobbyClient) GetLobbyMemberMetadataValue(lobbyID int64, userID int64, key string) (string, error) {
+	if c.manager == nil {
 		return "", fmt.Errorf("lobby manager not available")
 	}
 
@@ -198,9 +188,8 @@ func (lc *LobbyClient) GetLobbyMemberMetadataValue(lobbyID int64, userID int64, 
 	return "", nil
 }
 
-// SetLobbyMemberMetadata sets lobby member metadata
-func (lc *LobbyClient) SetLobbyMemberMetadata(lobbyID int64, userID int64, key, value string) error {
-	if lc.manager == nil {
+func (c *LobbyClient) SetLobbyMemberMetadata(lobbyID int64, userID int64, key, value string) error {
+	if c.manager == nil {
 		return fmt.Errorf("lobby manager not available")
 	}
 
@@ -209,9 +198,8 @@ func (lc *LobbyClient) SetLobbyMemberMetadata(lobbyID int64, userID int64, key, 
 	return nil
 }
 
-// DeleteLobbyMemberMetadata deletes lobby member metadata
-func (lc *LobbyClient) DeleteLobbyMemberMetadata(lobbyID int64, userID int64, key string) error {
-	if lc.manager == nil {
+func (c *LobbyClient) DeleteLobbyMemberMetadata(lobbyID int64, userID int64, key string) error {
+	if c.manager == nil {
 		return fmt.Errorf("lobby manager not available")
 	}
 
@@ -220,9 +208,8 @@ func (lc *LobbyClient) DeleteLobbyMemberMetadata(lobbyID int64, userID int64, ke
 	return nil
 }
 
-// GetLobbyMemberMetadataCount gets the lobby member metadata count
-func (lc *LobbyClient) GetLobbyMemberMetadataCount(lobbyID int64, userID int64) (int32, error) {
-	if lc.manager == nil {
+func (c *LobbyClient) GetLobbyMemberMetadataCount(lobbyID int64, userID int64) (int32, error) {
+	if c.manager == nil {
 		return 0, fmt.Errorf("lobby manager not available")
 	}
 
@@ -231,9 +218,8 @@ func (lc *LobbyClient) GetLobbyMemberMetadataCount(lobbyID int64, userID int64) 
 	return 0, nil
 }
 
-// GetLobbyMemberMetadataKeyByIndex gets a lobby member metadata key by index
-func (lc *LobbyClient) GetLobbyMemberMetadataKeyByIndex(lobbyID int64, userID int64, index int32) (string, error) {
-	if lc.manager == nil {
+func (c *LobbyClient) GetLobbyMemberMetadataKeyByIndex(lobbyID int64, userID int64, index int32) (string, error) {
+	if c.manager == nil {
 		return "", fmt.Errorf("lobby manager not available")
 	}
 
@@ -242,17 +228,16 @@ func (lc *LobbyClient) GetLobbyMemberMetadataKeyByIndex(lobbyID int64, userID in
 	return "", nil
 }
 
-// SendLobbyMessage sends a message to a lobby asynchronously and returns a channel for the result
-func (lc *LobbyClient) SendLobbyMessage(lobbyID int64, data []byte) <-chan error {
+func (c *LobbyClient) SendLobbyMessage(lobbyID int64, data []byte) <-chan error {
 	errChan := make(chan error, 1)
 
-	if lc.manager == nil {
+	if c.manager == nil {
 		errChan <- fmt.Errorf("lobby manager not available")
 		close(errChan)
 		return errChan
 	}
 
-	lc.manager.SendLobbyMessage(lobbyID, data, func(result core.Result) {
+	c.manager.SendLobbyMessage(lobbyID, data, func(result core.Result) {
 		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to send lobby message: %v", result)
 		} else {
@@ -264,17 +249,16 @@ func (lc *LobbyClient) SendLobbyMessage(lobbyID int64, data []byte) <-chan error
 	return errChan
 }
 
-// DeleteLobby deletes a lobby asynchronously and returns a channel for the result
-func (lc *LobbyClient) DeleteLobby(lobbyID int64) <-chan error {
+func (c *LobbyClient) DeleteLobby(lobbyID int64) <-chan error {
 	errChan := make(chan error, 1)
 
-	if lc.manager == nil {
+	if c.manager == nil {
 		errChan <- fmt.Errorf("lobby manager not available")
 		close(errChan)
 		return errChan
 	}
 
-	lc.manager.DeleteLobby(lobbyID, func(result core.Result) {
+	c.manager.DeleteLobby(lobbyID, func(result core.Result) {
 		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to delete lobby: %v", result)
 		} else {

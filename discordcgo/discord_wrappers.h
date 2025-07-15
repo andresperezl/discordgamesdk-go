@@ -18,6 +18,8 @@ struct IDiscordStorageManager* discord_core_get_storage_manager(void* core);
 struct IDiscordStoreManager* discord_core_get_store_manager(void* core);
 struct IDiscordVoiceManager* discord_core_get_voice_manager(void* core);
 struct IDiscordAchievementManager* discord_core_get_achievement_manager(void* core);
+struct IDiscordImageManager* discord_core_get_image_manager(void* core);
+struct IDiscordRelationshipManager* discord_core_get_relationship_manager(void* core);
 
 // Application manager wrappers
 void discord_application_manager_validate_or_exit(struct IDiscordApplicationManager* manager, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
@@ -138,25 +140,23 @@ void discord_overlay_manager_set_ime_composition_range_callback(struct IDiscordO
 void discord_overlay_manager_set_ime_selection_bounds_callback(struct IDiscordOverlayManager* manager, void* on_ime_selection_bounds_changed_data, void (*on_ime_selection_bounds_changed)(void* on_ime_selection_bounds_changed_data, struct DiscordRect anchor, struct DiscordRect focus, bool is_anchor_first));
 bool discord_overlay_manager_is_point_inside_click_zone(struct IDiscordOverlayManager* manager, int32_t x, int32_t y);
 
-// Additional lobby manager wrappers
-void discord_lobby_manager_update_lobby(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, struct IDiscordLobbyTransaction* transaction, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
-void discord_lobby_manager_delete_lobby(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
-void discord_lobby_manager_disconnect_lobby(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
-void discord_lobby_manager_send_lobby_message(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, uint8_t* data, uint32_t data_length, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
-void discord_lobby_manager_connect_voice(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
-void discord_lobby_manager_disconnect_voice(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
-enum EDiscordResult discord_lobby_manager_connect_network(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id);
-enum EDiscordResult discord_lobby_manager_disconnect_network(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id);
-enum EDiscordResult discord_lobby_manager_flush_network(struct IDiscordLobbyManager* manager);
-enum EDiscordResult discord_lobby_manager_open_network_channel(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, uint8_t channel_id, bool reliable);
-enum EDiscordResult discord_lobby_manager_send_network_message(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, uint8_t channel_id, uint8_t* data, uint32_t data_length);
-enum EDiscordResult discord_lobby_manager_get_lobby_update_transaction(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, struct IDiscordLobbyTransaction** transaction);
-enum EDiscordResult discord_lobby_transaction_set_type(struct IDiscordLobbyTransaction* transaction, enum EDiscordLobbyType type);
-enum EDiscordResult discord_lobby_transaction_set_owner(struct IDiscordLobbyTransaction* transaction, DiscordUserId owner_id);
-enum EDiscordResult discord_lobby_transaction_set_capacity(struct IDiscordLobbyTransaction* transaction, uint32_t capacity);
-enum EDiscordResult discord_lobby_transaction_set_metadata(struct IDiscordLobbyTransaction* transaction, DiscordMetadataKey key, DiscordMetadataValue value);
-enum EDiscordResult discord_lobby_transaction_delete_metadata(struct IDiscordLobbyTransaction* transaction, DiscordMetadataKey key);
-enum EDiscordResult discord_lobby_transaction_set_locked(struct IDiscordLobbyTransaction* transaction, bool locked);
+// Additional missing lobby manager wrappers
+void discord_lobby_manager_connect_lobby_with_activity_secret(struct IDiscordLobbyManager* manager, DiscordLobbySecret activity_secret, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result, struct DiscordLobby* lobby));
+enum EDiscordResult discord_lobby_manager_get_member_update_transaction(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, struct IDiscordLobbyMemberTransaction** transaction);
+enum EDiscordResult discord_lobby_manager_get_lobby_metadata_value(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, const char* key, char* value);
+enum EDiscordResult discord_lobby_manager_get_lobby_metadata_key(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, int32_t index, char* key);
+enum EDiscordResult discord_lobby_manager_lobby_metadata_count(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, int32_t* count);
+enum EDiscordResult discord_lobby_manager_member_count(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, int32_t* count);
+enum EDiscordResult discord_lobby_manager_get_member_user_id(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, int32_t index, DiscordUserId* user_id);
+enum EDiscordResult discord_lobby_manager_get_member_user(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, struct DiscordUser* user);
+enum EDiscordResult discord_lobby_manager_get_member_metadata_value(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, const char* key, char* value);
+enum EDiscordResult discord_lobby_manager_get_member_metadata_key(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, int32_t index, char* key);
+enum EDiscordResult discord_lobby_manager_member_metadata_count(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, int32_t* count);
+void discord_lobby_manager_update_member(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordUserId user_id, struct IDiscordLobbyMemberTransaction* transaction, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+enum EDiscordResult discord_lobby_manager_get_search_query(struct IDiscordLobbyManager* manager, struct IDiscordLobbySearchQuery** query);
+void discord_lobby_manager_search(struct IDiscordLobbyManager* manager, struct IDiscordLobbySearchQuery* query, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+void discord_lobby_manager_lobby_count(struct IDiscordLobbyManager* manager, int32_t* count);
+enum EDiscordResult discord_lobby_manager_get_lobby_id(struct IDiscordLobbyManager* manager, int32_t index, DiscordLobbyId* lobby_id);
 
 // Additional storage manager wrappers
 void discord_storage_manager_read_async_partial(struct IDiscordStorageManager* manager, const char* name, uint64_t offset, uint64_t length, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length));
@@ -167,4 +167,13 @@ enum EDiscordResult discord_storage_manager_get_path(struct IDiscordStorageManag
 
 // Store manager wrappers 
 enum EDiscordResult discord_lobby_manager_get_lobby_activity_secret(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordLobbySecret* secret);
+// Image manager wrappers
+void discord_image_manager_fetch(struct IDiscordImageManager* manager, struct DiscordImageHandle handle, bool refresh, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result, struct DiscordImageHandle handle_result));
+enum EDiscordResult discord_image_manager_get_dimensions(struct IDiscordImageManager* manager, struct DiscordImageHandle handle, struct DiscordImageDimensions* dimensions);
+enum EDiscordResult discord_image_manager_get_data(struct IDiscordImageManager* manager, struct DiscordImageHandle handle, uint8_t* data, uint32_t data_length);
+// Relationship manager wrappers
+void discord_relationship_manager_filter(struct IDiscordRelationshipManager* manager, void* filter_data, bool (*filter)(void* filter_data, struct DiscordRelationship* relationship));
+enum EDiscordResult discord_relationship_manager_count(struct IDiscordRelationshipManager* manager, int32_t* count);
+enum EDiscordResult discord_relationship_manager_get(struct IDiscordRelationshipManager* manager, DiscordUserId user_id, struct DiscordRelationship* relationship);
+enum EDiscordResult discord_relationship_manager_get_at(struct IDiscordRelationshipManager* manager, uint32_t index, struct DiscordRelationship* relationship);
 #endif 
