@@ -2,6 +2,7 @@ package discord
 
 import (
 	"fmt"
+	"unsafe"
 
 	core "github.com/andresperezl/discordctl/core"
 )
@@ -58,4 +59,12 @@ func (ac *AchievementClient) GetUserAchievementCount() (int32, error) {
 		return 0, fmt.Errorf("failed to get user achievement count: %v", res)
 	}
 	return count, nil
+}
+
+// FetchUserAchievements fetches user achievements asynchronously
+func (ac *AchievementClient) FetchUserAchievements(callbackData, callback unsafe.Pointer) {
+	if ac.manager == nil {
+		return
+	}
+	ac.manager.FetchUserAchievements(callbackData, callback)
 }

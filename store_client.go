@@ -2,6 +2,7 @@ package discord
 
 import (
 	"fmt"
+	"unsafe"
 
 	core "github.com/andresperezl/discordctl/core"
 )
@@ -18,6 +19,8 @@ func (sc *StoreClient) FetchSkus() ([]core.Sku, error) {
 		return nil, fmt.Errorf("store manager not available")
 	}
 
+	// For now, use the synchronous approach since we don't have proper callback support
+	// TODO: Implement proper async callback support
 	count, res := sc.manager.CountSkus()
 	if res != core.ResultOk {
 		return nil, fmt.Errorf("failed to count SKUs: %v", res)
@@ -32,6 +35,14 @@ func (sc *StoreClient) FetchSkus() ([]core.Sku, error) {
 		skus = append(skus, *sku)
 	}
 	return skus, nil
+}
+
+// FetchSkusAsync fetches SKUs asynchronously
+func (sc *StoreClient) FetchSkusAsync(callbackData, callback unsafe.Pointer) {
+	if sc.manager == nil {
+		return
+	}
+	sc.manager.FetchSkus(callbackData, callback)
 }
 
 // CountSkus gets the count of SKUs
@@ -76,6 +87,8 @@ func (sc *StoreClient) FetchEntitlements() ([]core.Entitlement, error) {
 		return nil, fmt.Errorf("store manager not available")
 	}
 
+	// For now, use the synchronous approach since we don't have proper callback support
+	// TODO: Implement proper async callback support
 	count, res := sc.manager.CountEntitlements()
 	if res != core.ResultOk {
 		return nil, fmt.Errorf("failed to count entitlements: %v", res)
@@ -90,6 +103,14 @@ func (sc *StoreClient) FetchEntitlements() ([]core.Entitlement, error) {
 		ents = append(ents, *ent)
 	}
 	return ents, nil
+}
+
+// FetchEntitlementsAsync fetches entitlements asynchronously
+func (sc *StoreClient) FetchEntitlementsAsync(callbackData, callback unsafe.Pointer) {
+	if sc.manager == nil {
+		return
+	}
+	sc.manager.FetchEntitlements(callbackData, callback)
 }
 
 // CountEntitlements gets the count of entitlements
@@ -149,4 +170,12 @@ func (sc *StoreClient) StartPurchase(skuID int64) error {
 	// For now, return success since we don't have proper callback support
 	// TODO: Implement proper purchase functionality
 	return nil
+}
+
+// StartPurchaseAsync starts a purchase asynchronously
+func (sc *StoreClient) StartPurchaseAsync(skuID int64, callbackData, callback unsafe.Pointer) {
+	if sc.manager == nil {
+		return
+	}
+	sc.manager.StartPurchase(skuID, callbackData, callback)
 }

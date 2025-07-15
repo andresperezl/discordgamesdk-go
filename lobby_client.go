@@ -103,9 +103,11 @@ func (c *LobbyClient) GetLobbyActivitySecret(lobbyID int64) (string, error) {
 		return "", fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
-	// For now, return empty string
-	return "", nil
+	secret, res := c.manager.GetLobbyActivitySecret(lobbyID)
+	if res != 0 {
+		return "", fmt.Errorf("failed to get lobby activity secret: %v", res)
+	}
+	return secret, nil
 }
 
 func (c *LobbyClient) SetLobbyMetadata(lobbyID int64, key, value string) error {
@@ -113,8 +115,17 @@ func (c *LobbyClient) SetLobbyMetadata(lobbyID int64, key, value string) error {
 		return fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
-	// For now, return success
+	transaction, res := c.manager.GetLobbyUpdateTransaction(lobbyID)
+	if res != core.ResultOk {
+		return fmt.Errorf("failed to get lobby update transaction: %v", res)
+	}
+
+	res = transaction.SetMetadata(key, value)
+	if res != core.ResultOk {
+		return fmt.Errorf("failed to set lobby metadata: %v", res)
+	}
+
+	// TODO: Implement proper update callback
 	return nil
 }
 
@@ -123,8 +134,17 @@ func (c *LobbyClient) DeleteLobbyMetadata(lobbyID int64, key string) error {
 		return fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
-	// For now, return success
+	transaction, res := c.manager.GetLobbyUpdateTransaction(lobbyID)
+	if res != core.ResultOk {
+		return fmt.Errorf("failed to get lobby update transaction: %v", res)
+	}
+
+	res = transaction.DeleteMetadata(key)
+	if res != core.ResultOk {
+		return fmt.Errorf("failed to delete lobby metadata: %v", res)
+	}
+
+	// TODO: Implement proper update callback
 	return nil
 }
 
@@ -133,9 +153,11 @@ func (c *LobbyClient) GetLobbyMetadataCount(lobbyID int64) (int32, error) {
 		return 0, fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
+	count, res := c.manager.LobbyMetadataCount(lobbyID)
+	if res != 0 {
+		return 0, fmt.Errorf("failed to get lobby metadata count: %v", res)
+	}
+	return count, nil
 }
 
 func (c *LobbyClient) GetLobbyMetadataKeyByIndex(lobbyID int64, index int32) (string, error) {
@@ -143,9 +165,11 @@ func (c *LobbyClient) GetLobbyMetadataKeyByIndex(lobbyID int64, index int32) (st
 		return "", fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
-	// For now, return empty string
-	return "", nil
+	key, res := c.manager.GetLobbyMetadataKey(lobbyID, index)
+	if res != 0 {
+		return "", fmt.Errorf("failed to get lobby metadata key: %v", res)
+	}
+	return key, nil
 }
 
 func (c *LobbyClient) GetLobbyMemberCount(lobbyID int64) (int32, error) {
@@ -153,9 +177,11 @@ func (c *LobbyClient) GetLobbyMemberCount(lobbyID int64) (int32, error) {
 		return 0, fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
+	count, res := c.manager.MemberCount(lobbyID)
+	if res != 0 {
+		return 0, fmt.Errorf("failed to get lobby member count: %v", res)
+	}
+	return count, nil
 }
 
 func (c *LobbyClient) GetLobbyMemberUserId(lobbyID int64, index int32) (int64, error) {
@@ -163,9 +189,11 @@ func (c *LobbyClient) GetLobbyMemberUserId(lobbyID int64, index int32) (int64, e
 		return 0, fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
-	// For now, return 0
-	return 0, nil
+	userID, res := c.manager.GetMemberUserID(lobbyID, index)
+	if res != 0 {
+		return 0, fmt.Errorf("failed to get lobby member user ID: %v", res)
+	}
+	return userID, nil
 }
 
 func (c *LobbyClient) GetLobbyMemberUser(lobbyID int64, userID int64) (*core.User, error) {
@@ -173,9 +201,11 @@ func (c *LobbyClient) GetLobbyMemberUser(lobbyID int64, userID int64) (*core.Use
 		return nil, fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
-	// For now, return nil
-	return nil, nil
+	user, res := c.manager.GetMemberUser(lobbyID, userID)
+	if res != 0 {
+		return nil, fmt.Errorf("failed to get lobby member user: %v", res)
+	}
+	return user, nil
 }
 
 func (c *LobbyClient) GetLobbyMemberMetadataValue(lobbyID int64, userID int64, key string) (string, error) {
@@ -183,9 +213,11 @@ func (c *LobbyClient) GetLobbyMemberMetadataValue(lobbyID int64, userID int64, k
 		return "", fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
-	// For now, return empty string
-	return "", nil
+	value, res := c.manager.GetMemberMetadataValue(lobbyID, userID, key)
+	if res != 0 {
+		return "", fmt.Errorf("failed to get lobby member metadata value: %v", res)
+	}
+	return value, nil
 }
 
 func (c *LobbyClient) SetLobbyMemberMetadata(lobbyID int64, userID int64, key, value string) error {
@@ -193,7 +225,12 @@ func (c *LobbyClient) SetLobbyMemberMetadata(lobbyID int64, userID int64, key, v
 		return fmt.Errorf("lobby manager not available")
 	}
 
-	// This would need to be implemented in the C wrapper
+	transaction := c.manager.GetMemberUpdateTransaction(lobbyID, userID)
+	if transaction == nil {
+		return fmt.Errorf("failed to get member update transaction")
+	}
+
+	// TODO: Implement proper member update transaction methods
 	// For now, return success
 	return nil
 }

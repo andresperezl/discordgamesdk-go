@@ -676,6 +676,30 @@ func (s *StoreManager) HasSkuEntitlement(skuID int64) (bool, Result) {
 	return has, Result(res)
 }
 
+// FetchSkus fetches SKUs asynchronously
+func (s *StoreManager) FetchSkus(callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	if s.manager == nil {
+		return
+	}
+	dcgo.StoreManagerFetchSkus(s.manager, callbackData, callback)
+}
+
+// FetchEntitlements fetches entitlements asynchronously
+func (s *StoreManager) FetchEntitlements(callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	if s.manager == nil {
+		return
+	}
+	dcgo.StoreManagerFetchEntitlements(s.manager, callbackData, callback)
+}
+
+// StartPurchase starts a purchase asynchronously
+func (s *StoreManager) StartPurchase(skuID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	if s.manager == nil {
+		return
+	}
+	dcgo.StoreManagerStartPurchase(s.manager, skuID, callbackData, callback)
+}
+
 // Helper conversion functions
 func convertDiscordSku(sku *dcgo.DiscordSku) *Sku {
 	if sku == nil {

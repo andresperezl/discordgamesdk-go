@@ -70,3 +70,11 @@ func (a *AchievementManager) GetUserAchievementCount() (int32, Result) {
 	dcgo.AchievementManagerCountUserAchievements(a.manager, unsafe.Pointer(&count))
 	return count, ResultOk
 }
+
+// FetchUserAchievements fetches user achievements asynchronously
+func (a *AchievementManager) FetchUserAchievements(callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	if a.manager == nil {
+		return
+	}
+	dcgo.AchievementManagerFetchUserAchievements(a.manager, callbackData, callback)
+}

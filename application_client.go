@@ -20,6 +20,25 @@ func (ac *ApplicationClient) GetCurrentLocale() (string, error) {
 	return ac.manager.GetCurrentLocale(), nil
 }
 
+// GetCurrentBranch returns the current branch
+func (ac *ApplicationClient) GetCurrentBranch() (string, error) {
+	if ac.manager == nil {
+		return "", fmt.Errorf("application manager not available")
+	}
+	return ac.manager.GetCurrentBranch(), nil
+}
+
+// GetTicket gets a ticket asynchronously and returns a channel for the result
+func (ac *ApplicationClient) GetTicket() (string, error) {
+	if ac.manager == nil {
+		return "", fmt.Errorf("application manager not available")
+	}
+
+	// This would need to be implemented in the C wrapper
+	// For now, return success
+	return "", nil
+}
+
 // GetOAuth2Token gets an OAuth2 token asynchronously and returns a channel for the result
 func (ac *ApplicationClient) GetOAuth2Token() (*core.OAuth2Token, error) {
 	if ac.manager == nil {

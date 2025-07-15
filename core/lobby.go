@@ -536,3 +536,12 @@ func (lm *LobbyManager) GetLobbyID(index int32) (int64, int32) {
 	})
 	return lobbyID, res
 }
+
+// GetLobbyActivitySecret retrieves the activity secret for a lobby
+func (lm *LobbyManager) GetLobbyActivitySecret(lobbyID int64) (string, int32) {
+	var secret [4096]byte
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetLobbyActivitySecret(lm.manager, lobbyID, unsafe.Pointer(&secret[0]))
+	})
+	return dcgo.GoStringFromBytes(&secret[0]), res
+}
