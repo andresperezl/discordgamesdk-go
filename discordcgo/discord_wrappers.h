@@ -79,9 +79,17 @@ enum EDiscordResult discord_network_manager_send_message(struct IDiscordNetworkM
 
 // Storage manager wrappers
 enum EDiscordResult discord_storage_manager_read(struct IDiscordStorageManager* manager, const char* name, uint8_t* data, uint32_t data_length, uint32_t* read);
-void discord_storage_manager_read_async(struct IDiscordStorageManager* manager, const char* name, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length));
+// Callback trampoline for Go
+typedef void (*go_storage_read_async_callback_t)(void* go_callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length);
+
+// Update the read_async wrapper to accept only go_callback_data
+void discord_storage_manager_read_async_trampoline(struct IDiscordStorageManager* manager, const char* name, void* go_callback_data);
 enum EDiscordResult discord_storage_manager_write(struct IDiscordStorageManager* manager, const char* name, uint8_t* data, uint32_t data_length);
-void discord_storage_manager_write_async(struct IDiscordStorageManager* manager, const char* name, uint8_t* data, uint32_t data_length, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result));
+// Callback trampoline for Go write async
+typedef void (*go_storage_write_async_callback_t)(void* go_callback_data, enum EDiscordResult result);
+
+// Update the write_async wrapper to accept only go_callback_data
+void discord_storage_manager_write_async_trampoline(struct IDiscordStorageManager* manager, const char* name, uint8_t* data, uint32_t data_length, void* go_callback_data);
 enum EDiscordResult discord_storage_manager_delete_(struct IDiscordStorageManager* manager, const char* name);
 enum EDiscordResult discord_storage_manager_exists(struct IDiscordStorageManager* manager, const char* name, bool* exists);
 void discord_storage_manager_count(struct IDiscordStorageManager* manager, int32_t* count);

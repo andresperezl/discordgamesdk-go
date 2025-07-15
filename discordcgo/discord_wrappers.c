@@ -216,6 +216,31 @@ void discord_storage_manager_count(struct IDiscordStorageManager* manager, int32
     manager->count(manager, count);
 }
 
+// Forward declaration for Go callback trampoline
+extern void go_storage_read_async_callback_trampoline(void* go_callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length);
+
+// C callback that forwards to Go trampoline
+static void c_storage_read_async_callback(void* go_callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length) {
+    go_storage_read_async_callback_trampoline(go_callback_data, result, data, data_length);
+}
+
+void discord_storage_manager_read_async_trampoline(struct IDiscordStorageManager* manager, const char* name, void* go_callback_data) {
+    (void)go_callback_data; // Unused
+    manager->read_async(manager, name, go_callback_data, c_storage_read_async_callback);
+}
+
+// Forward declaration for Go write async callback trampoline
+extern void go_storage_write_async_callback_trampoline(void* go_callback_data, enum EDiscordResult result);
+
+// C callback that forwards to Go trampoline for write async
+static void c_storage_write_async_callback(void* go_callback_data, enum EDiscordResult result) {
+    go_storage_write_async_callback_trampoline(go_callback_data, result);
+}
+
+void discord_storage_manager_write_async_trampoline(struct IDiscordStorageManager* manager, const char* name, uint8_t* data, uint32_t data_length, void* go_callback_data) {
+    manager->write_async(manager, name, data, data_length, go_callback_data, c_storage_write_async_callback);
+}
+
 // Overlay manager wrappers
 void discord_overlay_manager_is_enabled(struct IDiscordOverlayManager* manager, bool* enabled) {
     manager->is_enabled(manager, enabled);

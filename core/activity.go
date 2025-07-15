@@ -25,7 +25,10 @@ func (a *ActivityManager) RegisterCommand(command string) Result {
 	}
 	cCommand := dcgo.GoStringToCChar(command)
 	defer dcgo.FreeCChar(cCommand)
-	return Result(dcgo.ActivityManagerRegisterCommand(a.ptr, cCommand))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.ActivityManagerRegisterCommand(a.ptr, cCommand)
+	})
+	return Result(res)
 }
 
 // RegisterSteam registers a Steam ID for the activity
@@ -33,8 +36,10 @@ func (a *ActivityManager) RegisterSteam(steamID uint32) Result {
 	if a.ptr == nil {
 		return ResultInternalError
 	}
-
-	return Result(dcgo.ActivityManagerRegisterSteam(a.ptr, steamID))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.ActivityManagerRegisterSteam(a.ptr, steamID)
+	})
+	return Result(res)
 }
 
 // UpdateActivity updates the current activity with proper callback handling
@@ -109,7 +114,10 @@ func (a *ActivityManager) UpdateActivity(activity *Activity, callback func(resul
 	cActivity.SupportedPlatforms = activity.SupportedPlatforms
 
 	// Call the C wrapper function
-	dcgo.ActivityManagerUpdateActivity(a.ptr, unsafe.Pointer(&cActivity), nil, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ActivityManagerUpdateActivity(a.ptr, unsafe.Pointer(&cActivity), nil, nil)
+		return nil
+	})
 
 	// If we have callback tracking, wait for the result
 	if callback != nil && a.core != nil && callbackID != "" {
@@ -154,7 +162,10 @@ func (a *ActivityManager) ClearActivity(callback func(result Result)) {
 	}
 
 	// Call the C wrapper function
-	dcgo.ActivityManagerClearActivity(a.ptr, nil, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ActivityManagerClearActivity(a.ptr, nil, nil)
+		return nil
+	})
 
 	// If we have callback tracking, wait for the result
 	if callback != nil && a.core != nil && callbackID != "" {
@@ -199,7 +210,10 @@ func (a *ActivityManager) SendRequestReply(userID int64, reply ActivityJoinReque
 	}
 
 	// Call the C wrapper function
-	dcgo.ActivityManagerSendRequestReply(a.ptr, userID, int32(reply), nil, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ActivityManagerSendRequestReply(a.ptr, userID, int32(reply), nil, nil)
+		return nil
+	})
 
 	// If we have callback tracking, wait for the result
 	if callback != nil && a.core != nil && callbackID != "" {
@@ -232,7 +246,10 @@ func (a *ActivityManager) SendInvite(userID int64, actionType ActivityActionType
 
 	cContent := dcgo.GoStringToCChar(content)
 	defer dcgo.FreeCChar(cContent)
-	dcgo.ActivityManagerSendInvite(a.ptr, userID, int32(actionType), cContent, nil, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ActivityManagerSendInvite(a.ptr, userID, int32(actionType), cContent, nil, nil)
+		return nil
+	})
 
 	if callback != nil && a.core != nil && callbackID != "" {
 		if result, found := a.core.WaitForCallbackResult(callbackID, 5*time.Second); found {
@@ -261,7 +278,10 @@ func (a *ActivityManager) AcceptInvite(userID int64, callback func(result Result
 	}
 
 	// Call the C wrapper function
-	dcgo.ActivityManagerAcceptInvite(a.ptr, userID, nil, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ActivityManagerAcceptInvite(a.ptr, userID, nil, nil)
+		return nil
+	})
 
 	// If we have callback tracking, wait for the result
 	if callback != nil && a.core != nil && callbackID != "" {

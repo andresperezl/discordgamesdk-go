@@ -7,6 +7,11 @@ package discordcgo
 #include "discord_wrappers.h"
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
+
+// Typedef for the Go callback trampoline
+typedef void (*go_storage_read_async_callback_t)(void* go_callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length);
+extern void go_storage_read_async_callback_trampoline(void* go_callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length);
 
 int64_t get_discord_sku_id(struct DiscordSku* sku) { return sku->id; }
 int32_t get_discord_sku_type(struct DiscordSku* sku) { return sku->type; }
@@ -22,7 +27,100 @@ uint64_t get_discord_file_stat_last_modified(struct DiscordFileStat* stat) { ret
 void get_discord_file_stat_filename(struct DiscordFileStat* stat, char* out, int outlen) { strncpy(out, stat->filename, outlen-1); out[outlen-1] = '\0'; }
 */
 import "C"
-import "unsafe"
+import (
+	"runtime"
+	"sync"
+	"unsafe"
+)
+
+// Dispatcher for serializing all SDK calls on a single OS thread
+type sdkCall func()
+
+type sdkDispatcher struct {
+	calls chan sdkCall
+	once  sync.Once
+}
+
+var dispatcher = &sdkDispatcher{
+	calls: make(chan sdkCall, 128),
+}
+
+func (d *sdkDispatcher) start() {
+	d.once.Do(func() {
+		go func() {
+			runtime.LockOSThread()
+			for call := range d.calls {
+				call()
+			}
+		}()
+	})
+}
+
+func runOnDispatcher(call sdkCall) {
+	dispatcher.start()
+	dispatcher.calls <- call
+}
+
+// Run a function on the dispatcher and wait for its result
+func RunOnDispatcherSync[T any](fn func() T) T {
+	ch := make(chan T, 1)
+	runOnDispatcher(func() {
+		ch <- fn()
+	})
+	return <-ch
+}
+
+// Callback registry for Go async storage read
+var storageReadAsyncCallbacks sync.Map // map[uintptr]func(result int32, data []byte)
+
+//export go_storage_read_async_callback_trampoline
+func go_storage_read_async_callback_trampoline(go_callback_data unsafe.Pointer, result C.enum_EDiscordResult, data *C.uint8_t, data_length C.uint32_t) {
+	cbID := uintptr(go_callback_data)
+	runOnDispatcher(func() {
+		if cb, ok := storageReadAsyncCallbacks.Load(cbID); ok {
+			callback := cb.(func(result int32, data []byte))
+			var goData []byte
+			if data != nil && data_length > 0 {
+				goData = C.GoBytes(unsafe.Pointer(data), C.int(data_length))
+			}
+			callback(int32(result), goData)
+			storageReadAsyncCallbacks.Delete(cbID)
+		}
+	})
+}
+
+// StorageManagerReadAsync with Go callback trampoline
+func StorageManagerReadAsync(manager unsafe.Pointer, name *C.char, callback func(result int32, data []byte)) {
+	cbID := uintptr(unsafe.Pointer(&callback))
+	storageReadAsyncCallbacks.Store(cbID, callback)
+	runOnDispatcher(func() {
+		C.discord_storage_manager_read_async_trampoline((*C.struct_IDiscordStorageManager)(manager), name, unsafe.Pointer(cbID))
+	})
+}
+
+// Callback registry for Go async storage write
+var storageWriteAsyncCallbacks sync.Map // map[uintptr]func(result int32)
+
+//export go_storage_write_async_callback_trampoline
+func go_storage_write_async_callback_trampoline(go_callback_data unsafe.Pointer, result C.enum_EDiscordResult) {
+	cbID := uintptr(go_callback_data)
+	runOnDispatcher(func() {
+		if cb, ok := storageWriteAsyncCallbacks.Load(cbID); ok {
+			callback := cb.(func(result int32))
+			callback(int32(result))
+			storageWriteAsyncCallbacks.Delete(cbID)
+		}
+	})
+}
+
+// StorageManagerWriteAsync with Go callback trampoline
+func StorageManagerWriteAsync(manager unsafe.Pointer, name *C.char, data unsafe.Pointer, dataLength uint32, callback func(result int32)) {
+	cbID := uintptr(unsafe.Pointer(&callback))
+	storageWriteAsyncCallbacks.Store(cbID, callback)
+	runOnDispatcher(func() {
+		C.discord_storage_manager_write_async_trampoline((*C.struct_IDiscordStorageManager)(manager), name, (*C.uint8_t)(data), C.uint32_t(dataLength), unsafe.Pointer(cbID))
+	})
+}
 
 // Core wrappers
 func CoreCreate(version int32, params unsafe.Pointer, result unsafe.Pointer) int32 {
@@ -402,10 +500,6 @@ func FreeCChar(cstr *C.char) {
 // Additional storage manager wrappers
 func StorageManagerReadAsyncPartial(manager unsafe.Pointer, name *C.char, offset uint64, length uint64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
 	C.discord_storage_manager_read_async_partial((*C.struct_IDiscordStorageManager)(manager), name, C.uint64_t(offset), C.uint64_t(length), callbackData, (*[0]byte)(callback))
-}
-
-func StorageManagerWriteAsync(manager unsafe.Pointer, name *C.char, data unsafe.Pointer, dataLength uint32, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	C.discord_storage_manager_write_async((*C.struct_IDiscordStorageManager)(manager), name, (*C.uint8_t)(data), C.uint32_t(dataLength), callbackData, (*[0]byte)(callback))
 }
 
 func StorageManagerStat(manager unsafe.Pointer, name *C.char, stat unsafe.Pointer) int32 {

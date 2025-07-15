@@ -403,7 +403,9 @@ func (c *Core) GetApplicationManager() *ApplicationManager {
 	if c.ptr == nil {
 		return nil
 	}
-	appManager := dcgo.CoreGetApplicationManager(c.ptr)
+	appManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetApplicationManager(c.ptr)
+	})
 	if appManager == nil {
 		return nil
 	}
@@ -415,7 +417,9 @@ func (c *Core) GetUserManager() *UserManager {
 	if c.ptr == nil {
 		return nil
 	}
-	userManager := dcgo.CoreGetUserManager(c.ptr)
+	userManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetUserManager(c.ptr)
+	})
 	if userManager == nil {
 		return nil
 	}
@@ -427,7 +431,9 @@ func (c *Core) GetActivityManager() *ActivityManager {
 	if c.ptr == nil {
 		return nil
 	}
-	activityManager := dcgo.CoreGetActivityManager(c.ptr)
+	activityManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetActivityManager(c.ptr)
+	})
 	if activityManager == nil {
 		return nil
 	}
@@ -441,7 +447,9 @@ func (c *Core) GetLobbyManager() *LobbyManager {
 	if c.ptr == nil {
 		return nil
 	}
-	lobbyManager := dcgo.CoreGetLobbyManager(c.ptr)
+	lobbyManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetLobbyManager(c.ptr)
+	})
 	if lobbyManager == nil {
 		return nil
 	}
@@ -453,7 +461,9 @@ func (c *Core) GetNetworkManager() *NetworkManager {
 	if c.ptr == nil {
 		return nil
 	}
-	networkManager := dcgo.CoreGetNetworkManager(c.ptr)
+	networkManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetNetworkManager(c.ptr)
+	})
 	if networkManager == nil {
 		return nil
 	}
@@ -465,7 +475,9 @@ func (c *Core) GetOverlayManager() *OverlayManager {
 	if c.ptr == nil {
 		return nil
 	}
-	overlayManager := dcgo.CoreGetOverlayManager(c.ptr)
+	overlayManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetOverlayManager(c.ptr)
+	})
 	if overlayManager == nil {
 		return nil
 	}
@@ -477,7 +489,9 @@ func (c *Core) GetStorageManager() *StorageManager {
 	if c.ptr == nil {
 		return nil
 	}
-	storageManager := dcgo.CoreGetStorageManager(c.ptr)
+	storageManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetStorageManager(c.ptr)
+	})
 	if storageManager == nil {
 		return nil
 	}
@@ -489,7 +503,9 @@ func (c *Core) GetStoreManager() *StoreManager {
 	if c.ptr == nil {
 		return nil
 	}
-	storeManager := dcgo.CoreGetStoreManager(c.ptr)
+	storeManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetStoreManager(c.ptr)
+	})
 	if storeManager == nil {
 		return nil
 	}
@@ -501,7 +517,9 @@ func (c *Core) GetVoiceManager() *VoiceManager {
 	if c.ptr == nil {
 		return nil
 	}
-	voiceManager := dcgo.CoreGetVoiceManager(c.ptr)
+	voiceManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetVoiceManager(c.ptr)
+	})
 	if voiceManager == nil {
 		return nil
 	}
@@ -513,7 +531,9 @@ func (c *Core) GetAchievementManager() *AchievementManager {
 	if c.ptr == nil {
 		return nil
 	}
-	achievementManager := dcgo.CoreGetAchievementManager(c.ptr)
+	achievementManager := dcgo.RunOnDispatcherSync(func() unsafe.Pointer {
+		return dcgo.CoreGetAchievementManager(c.ptr)
+	})
 	if achievementManager == nil {
 		return nil
 	}

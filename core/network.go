@@ -18,7 +18,10 @@ func (n *NetworkManager) GetPeerID() uint64 {
 	}
 
 	var peerID uint64
-	dcgo.NetworkManagerGetPeerID(n.manager, unsafe.Pointer(&peerID))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.NetworkManagerGetPeerID(n.manager, unsafe.Pointer(&peerID))
+		return nil
+	})
 	return peerID
 }
 
@@ -27,8 +30,10 @@ func (n *NetworkManager) Flush() Result {
 	if n.manager == nil {
 		return ResultInternalError
 	}
-
-	return Result(dcgo.NetworkManagerFlush(n.manager))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.NetworkManagerFlush(n.manager)
+	})
+	return Result(res)
 }
 
 // OpenPeer opens a connection to a remote peer
@@ -36,7 +41,10 @@ func (n *NetworkManager) OpenPeer(peerID uint64, routeData string) Result {
 	if n.manager == nil {
 		return ResultInternalError
 	}
-	return Result(dcgo.NetworkManagerOpenPeerHelper(n.manager, peerID, routeData))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.NetworkManagerOpenPeerHelper(n.manager, peerID, routeData)
+	})
+	return Result(res)
 }
 
 // UpdatePeer updates the route data for a connected peer
@@ -44,7 +52,10 @@ func (n *NetworkManager) UpdatePeer(peerID uint64, routeData string) Result {
 	if n.manager == nil {
 		return ResultInternalError
 	}
-	return Result(dcgo.NetworkManagerUpdatePeerHelper(n.manager, peerID, routeData))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.NetworkManagerUpdatePeerHelper(n.manager, peerID, routeData)
+	})
+	return Result(res)
 }
 
 // ClosePeer closes the connection to a remote peer
@@ -52,8 +63,10 @@ func (n *NetworkManager) ClosePeer(peerID uint64) Result {
 	if n.manager == nil {
 		return ResultInternalError
 	}
-
-	return Result(dcgo.NetworkManagerClosePeer(n.manager, peerID))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.NetworkManagerClosePeer(n.manager, peerID)
+	})
+	return Result(res)
 }
 
 // OpenChannel opens a message channel to a connected peer
@@ -61,8 +74,10 @@ func (n *NetworkManager) OpenChannel(peerID uint64, channelID uint8, reliable bo
 	if n.manager == nil {
 		return ResultInternalError
 	}
-
-	return Result(dcgo.NetworkManagerOpenChannel(n.manager, peerID, channelID, reliable))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.NetworkManagerOpenChannel(n.manager, peerID, channelID, reliable)
+	})
+	return Result(res)
 }
 
 // CloseChannel closes a message channel to a connected peer
@@ -70,8 +85,10 @@ func (n *NetworkManager) CloseChannel(peerID uint64, channelID uint8) Result {
 	if n.manager == nil {
 		return ResultInternalError
 	}
-
-	return Result(dcgo.NetworkManagerCloseChannel(n.manager, peerID, channelID))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.NetworkManagerCloseChannel(n.manager, peerID, channelID)
+	})
+	return Result(res)
 }
 
 // SendMessage sends a message to a connected peer
@@ -84,6 +101,8 @@ func (n *NetworkManager) SendMessage(peerID uint64, channelID uint8, data []byte
 	if len(data) > 0 {
 		cData = unsafe.Pointer(&data[0])
 	}
-
-	return Result(dcgo.NetworkManagerSendMessage(n.manager, peerID, channelID, cData, uint32(len(data))))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.NetworkManagerSendMessage(n.manager, peerID, channelID, cData, uint32(len(data)))
+	})
+	return Result(res)
 }

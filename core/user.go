@@ -38,7 +38,9 @@ func (u *UserManager) GetCurrentUser() (*User, Result) {
 		cUser.avatar[i] = 0
 	}
 
-	result := dcgo.UserManagerGetCurrentUser(u.ptr, unsafe.Pointer(&cUser))
+	result := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.UserManagerGetCurrentUser(u.ptr, unsafe.Pointer(&cUser))
+	})
 
 	if result != int32(ResultOk) {
 		return nil, Result(result)
@@ -56,8 +58,10 @@ func (u *UserManager) GetUser(userID int64, callback func(result Result, user *U
 		return
 	}
 
-	// Call the C wrapper function
-	dcgo.UserManagerGetUser(u.ptr, userID, nil, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.UserManagerGetUser(u.ptr, userID, nil, nil)
+		return nil
+	})
 
 	// For now, call the callback immediately since we don't have proper callback support
 	if callback != nil {
@@ -72,7 +76,9 @@ func (u *UserManager) GetCurrentUserPremiumType() (PremiumType, Result) {
 	}
 
 	var premiumType int32
-	result := dcgo.UserManagerGetCurrentUserPremiumType(u.ptr, unsafe.Pointer(&premiumType))
+	result := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.UserManagerGetCurrentUserPremiumType(u.ptr, unsafe.Pointer(&premiumType))
+	})
 
 	if result != int32(ResultOk) {
 		return PremiumTypeNone, Result(result)
@@ -88,7 +94,9 @@ func (u *UserManager) CurrentUserHasFlag(flag UserFlag) (bool, Result) {
 	}
 
 	var hasFlag bool
-	result := dcgo.UserManagerCurrentUserHasFlag(u.ptr, int32(flag), unsafe.Pointer(&hasFlag))
+	result := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.UserManagerCurrentUserHasFlag(u.ptr, int32(flag), unsafe.Pointer(&hasFlag))
+	})
 
 	if result != int32(ResultOk) {
 		return false, Result(result)

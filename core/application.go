@@ -19,11 +19,10 @@ func (a *ApplicationManager) ValidateOrExit(callback func(result Result)) {
 		}
 		return
 	}
-
-	// Call the C wrapper function
-	dcgo.ApplicationManagerValidateOrExit(a.ptr, nil, nil)
-
-	// For now, call the callback immediately since we don't have proper callback support
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ApplicationManagerValidateOrExit(a.ptr, nil, nil)
+		return nil
+	})
 	if callback != nil {
 		callback(ResultOk)
 	}
@@ -36,7 +35,10 @@ func (a *ApplicationManager) GetCurrentLocale() string {
 	}
 
 	var locale [128]byte // DiscordLocale is 128 bytes
-	dcgo.ApplicationManagerGetCurrentLocale(a.ptr, unsafe.Pointer(&locale[0]))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ApplicationManagerGetCurrentLocale(a.ptr, unsafe.Pointer(&locale[0]))
+		return nil
+	})
 	return string(locale[:])
 }
 
@@ -47,7 +49,10 @@ func (a *ApplicationManager) GetCurrentBranch() string {
 	}
 
 	var branch [4096]byte // DiscordBranch is 4096 bytes
-	dcgo.ApplicationManagerGetCurrentBranch(a.ptr, unsafe.Pointer(&branch[0]))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ApplicationManagerGetCurrentBranch(a.ptr, unsafe.Pointer(&branch[0]))
+		return nil
+	})
 	return string(branch[:])
 }
 
@@ -59,11 +64,10 @@ func (a *ApplicationManager) GetOAuth2Token(callback func(result Result, token *
 		}
 		return
 	}
-
-	// Call the C wrapper function
-	dcgo.ApplicationManagerGetOAuth2Token(a.ptr, nil, nil)
-
-	// For now, call the callback immediately since we don't have proper callback support
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ApplicationManagerGetOAuth2Token(a.ptr, nil, nil)
+		return nil
+	})
 	if callback != nil {
 		callback(ResultOk, nil)
 	}
@@ -77,11 +81,10 @@ func (a *ApplicationManager) GetTicket(callback func(result Result, data string)
 		}
 		return
 	}
-
-	// Call the C wrapper function
-	dcgo.ApplicationManagerGetTicket(a.ptr, nil, nil)
-
-	// For now, call the callback immediately since we don't have proper callback support
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.ApplicationManagerGetTicket(a.ptr, nil, nil)
+		return nil
+	})
 	if callback != nil {
 		callback(ResultOk, "")
 	}

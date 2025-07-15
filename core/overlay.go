@@ -18,7 +18,10 @@ func (o *OverlayManager) IsEnabled() bool {
 	}
 
 	var enabled bool
-	dcgo.OverlayManagerIsEnabled(o.manager, unsafe.Pointer(&enabled))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerIsEnabled(o.manager, unsafe.Pointer(&enabled))
+		return nil
+	})
 	return enabled
 }
 
@@ -29,7 +32,10 @@ func (o *OverlayManager) IsLocked() bool {
 	}
 
 	var locked bool
-	dcgo.OverlayManagerIsLocked(o.manager, unsafe.Pointer(&locked))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerIsLocked(o.manager, unsafe.Pointer(&locked))
+		return nil
+	})
 	return locked
 }
 
@@ -41,11 +47,10 @@ func (o *OverlayManager) SetLocked(locked bool, callback func(result Result)) {
 		}
 		return
 	}
-
-	// Call the C wrapper function
-	dcgo.OverlayManagerSetLocked(o.manager, locked, nil, nil)
-
-	// For now, call the callback immediately since we don't have proper callback support
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerSetLocked(o.manager, locked, nil, nil)
+		return nil
+	})
 	if callback != nil {
 		callback(ResultOk)
 	}
@@ -59,11 +64,10 @@ func (o *OverlayManager) OpenActivityInvite(actionType ActivityActionType, callb
 		}
 		return
 	}
-
-	// Call the C wrapper function
-	dcgo.OverlayManagerOpenActivityInvite(o.manager, int32(actionType), nil, nil)
-
-	// For now, call the callback immediately since we don't have proper callback support
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerOpenActivityInvite(o.manager, int32(actionType), nil, nil)
+		return nil
+	})
 	if callback != nil {
 		callback(ResultOk)
 	}
@@ -79,7 +83,10 @@ func (o *OverlayManager) OpenGuildInvite(code string, callback func(result Resul
 	}
 	cCode := dcgo.GoStringToCChar(code)
 	defer dcgo.FreeCChar(cCode)
-	dcgo.OverlayManagerOpenGuildInvite(o.manager, cCode, nil, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerOpenGuildInvite(o.manager, cCode, nil, nil)
+		return nil
+	})
 	if callback != nil {
 		callback(ResultOk)
 	}
@@ -93,11 +100,10 @@ func (o *OverlayManager) OpenVoiceSettings(callback func(result Result)) {
 		}
 		return
 	}
-
-	// Call the C wrapper function
-	dcgo.OverlayManagerOpenVoiceSettings(o.manager, nil, nil)
-
-	// For now, call the callback immediately since we don't have proper callback support
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerOpenVoiceSettings(o.manager, nil, nil)
+		return nil
+	})
 	if callback != nil {
 		callback(ResultOk)
 	}
@@ -108,7 +114,10 @@ func (o *OverlayManager) InitDrawingDXGI(swapchain unsafe.Pointer, useMessageFor
 	if o.manager == nil {
 		return ResultInternalError
 	}
-	return Result(dcgo.OverlayManagerInitDrawingDXGI(o.manager, swapchain, useMessageForwarding))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.OverlayManagerInitDrawingDXGI(o.manager, swapchain, useMessageForwarding)
+	})
+	return Result(res)
 }
 
 // OnPresent handles present events
@@ -116,7 +125,10 @@ func (o *OverlayManager) OnPresent() {
 	if o.manager == nil {
 		return
 	}
-	dcgo.OverlayManagerOnPresent(o.manager)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerOnPresent(o.manager)
+		return nil
+	})
 }
 
 // ForwardMessage forwards a message
@@ -124,7 +136,10 @@ func (o *OverlayManager) ForwardMessage(message unsafe.Pointer) {
 	if o.manager == nil {
 		return
 	}
-	dcgo.OverlayManagerForwardMessage(o.manager, message)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerForwardMessage(o.manager, message)
+		return nil
+	})
 }
 
 // KeyEvent handles key events
@@ -134,7 +149,10 @@ func (o *OverlayManager) KeyEvent(down bool, keyCode string, variant KeyVariant)
 	}
 	cKey := dcgo.GoStringToCChar(keyCode)
 	defer dcgo.FreeCChar(cKey)
-	dcgo.OverlayManagerKeyEvent(o.manager, down, cKey, int32(variant))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerKeyEvent(o.manager, down, cKey, int32(variant))
+		return nil
+	})
 }
 
 // CharEvent handles character events
@@ -144,7 +162,10 @@ func (o *OverlayManager) CharEvent(character string) {
 	}
 	cChar := dcgo.GoStringToCChar(character)
 	defer dcgo.FreeCChar(cChar)
-	dcgo.OverlayManagerCharEvent(o.manager, cChar)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.OverlayManagerCharEvent(o.manager, cChar)
+		return nil
+	})
 }
 
 // MouseButtonEvent handles mouse button events

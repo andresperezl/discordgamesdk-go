@@ -3,7 +3,6 @@ package core
 import (
 	"unsafe"
 
-	"github.com/andresperezl/discordctl/discordcgo"
 	dcgo "github.com/andresperezl/discordctl/discordcgo"
 )
 
@@ -30,8 +29,10 @@ func (l *LobbyManager) CreateLobby(transaction *LobbyTransaction, callback func(
 	if callback != nil {
 		callbackData = unsafe.Pointer(&callback)
 	}
-
-	discordcgo.LobbyManagerCreateLobby(l.manager, cTransaction, callbackData, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerCreateLobby(l.manager, cTransaction, callbackData, nil)
+		return nil
+	})
 }
 
 // UpdateLobby updates a lobby
@@ -52,8 +53,10 @@ func (l *LobbyManager) UpdateLobby(lobbyID int64, transaction *LobbyTransaction,
 	if callback != nil {
 		callbackData = unsafe.Pointer(&callback)
 	}
-
-	discordcgo.LobbyManagerUpdateLobby(l.manager, lobbyID, cTransaction, callbackData, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerUpdateLobby(l.manager, lobbyID, cTransaction, callbackData, nil)
+		return nil
+	})
 }
 
 // DeleteLobby deletes a lobby
@@ -69,8 +72,10 @@ func (l *LobbyManager) DeleteLobby(lobbyID int64, callback func(result Result)) 
 	if callback != nil {
 		callbackData = unsafe.Pointer(&callback)
 	}
-
-	discordcgo.LobbyManagerDeleteLobby(l.manager, lobbyID, callbackData, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerDeleteLobby(l.manager, lobbyID, callbackData, nil)
+		return nil
+	})
 }
 
 // ConnectLobby connects to a lobby
@@ -87,8 +92,10 @@ func (l *LobbyManager) ConnectLobby(lobbyID int64, secret string, callback func(
 	if callback != nil {
 		callbackData = unsafe.Pointer(&callback)
 	}
-
-	discordcgo.LobbyManagerConnectLobby(l.manager, lobbyID, unsafe.Pointer(&cSecret[0]), callbackData, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerConnectLobby(l.manager, lobbyID, unsafe.Pointer(&cSecret[0]), callbackData, nil)
+		return nil
+	})
 }
 
 // DisconnectLobby disconnects from a lobby
@@ -104,8 +111,10 @@ func (l *LobbyManager) DisconnectLobby(lobbyID int64, callback func(result Resul
 	if callback != nil {
 		callbackData = unsafe.Pointer(&callback)
 	}
-
-	discordcgo.LobbyManagerDisconnectLobby(l.manager, lobbyID, callbackData, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerDisconnectLobby(l.manager, lobbyID, callbackData, nil)
+		return nil
+	})
 }
 
 // GetLobby gets a lobby by ID
@@ -114,7 +123,17 @@ func (l *LobbyManager) GetLobby(lobbyID int64) (*Lobby, Result) {
 		return nil, ResultInternalError
 	}
 
-	id, typ, ownerID, secret, capacity, locked, res := dcgo.LobbyManagerGetLobbyGo(l.manager, lobbyID)
+	var id int64
+	var typ int32
+	var ownerID int64
+	var secret string
+	var capacity uint32
+	var locked bool
+	var res int32
+	dcgo.RunOnDispatcherSync(func() any {
+		id, typ, ownerID, secret, capacity, locked, res = dcgo.LobbyManagerGetLobbyGo(l.manager, lobbyID)
+		return nil
+	})
 	if res != 0 {
 		return nil, Result(res)
 	}
@@ -146,8 +165,10 @@ func (l *LobbyManager) SendLobbyMessage(lobbyID int64, data []byte, callback fun
 	if callback != nil {
 		callbackData = unsafe.Pointer(&callback)
 	}
-
-	discordcgo.LobbyManagerSendLobbyMessage(l.manager, lobbyID, cData, uint32(len(data)), callbackData, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerSendLobbyMessage(l.manager, lobbyID, cData, uint32(len(data)), callbackData, nil)
+		return nil
+	})
 }
 
 // ConnectVoice connects voice to a lobby
@@ -163,8 +184,10 @@ func (l *LobbyManager) ConnectVoice(lobbyID int64, callback func(result Result))
 	if callback != nil {
 		callbackData = unsafe.Pointer(&callback)
 	}
-
-	discordcgo.LobbyManagerConnectVoice(l.manager, lobbyID, callbackData, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerConnectVoice(l.manager, lobbyID, callbackData, nil)
+		return nil
+	})
 }
 
 // DisconnectVoice disconnects voice from a lobby
@@ -180,8 +203,10 @@ func (l *LobbyManager) DisconnectVoice(lobbyID int64, callback func(result Resul
 	if callback != nil {
 		callbackData = unsafe.Pointer(&callback)
 	}
-
-	discordcgo.LobbyManagerDisconnectVoice(l.manager, lobbyID, callbackData, nil)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerDisconnectVoice(l.manager, lobbyID, callbackData, nil)
+		return nil
+	})
 }
 
 // ConnectNetwork connects network to a lobby
@@ -190,7 +215,9 @@ func (l *LobbyManager) ConnectNetwork(lobbyID int64) Result {
 		return ResultInternalError
 	}
 
-	return Result(discordcgo.LobbyManagerConnectNetwork(l.manager, lobbyID))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerConnectNetwork(l.manager, lobbyID)
+	}))
 }
 
 // DisconnectNetwork disconnects network from a lobby
@@ -199,7 +226,9 @@ func (l *LobbyManager) DisconnectNetwork(lobbyID int64) Result {
 		return ResultInternalError
 	}
 
-	return Result(discordcgo.LobbyManagerDisconnectNetwork(l.manager, lobbyID))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerDisconnectNetwork(l.manager, lobbyID)
+	}))
 }
 
 // FlushNetwork flushes network messages
@@ -208,7 +237,9 @@ func (l *LobbyManager) FlushNetwork() Result {
 		return ResultInternalError
 	}
 
-	return Result(discordcgo.LobbyManagerFlushNetwork(l.manager))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerFlushNetwork(l.manager)
+	}))
 }
 
 // OpenNetworkChannel opens a network channel
@@ -217,7 +248,9 @@ func (l *LobbyManager) OpenNetworkChannel(lobbyID int64, channelID uint8, reliab
 		return ResultInternalError
 	}
 
-	return Result(discordcgo.LobbyManagerOpenNetworkChannel(l.manager, lobbyID, channelID, reliable))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerOpenNetworkChannel(l.manager, lobbyID, channelID, reliable)
+	}))
 }
 
 // SendNetworkMessage sends a network message
@@ -231,7 +264,9 @@ func (l *LobbyManager) SendNetworkMessage(lobbyID int64, userID int64, channelID
 		cData = unsafe.Pointer(&data[0])
 	}
 
-	return Result(discordcgo.LobbyManagerSendNetworkMessage(l.manager, lobbyID, userID, channelID, cData, uint32(len(data))))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerSendNetworkMessage(l.manager, lobbyID, userID, channelID, cData, uint32(len(data)))
+	}))
 }
 
 // LobbyTransaction represents a lobby transaction
@@ -246,7 +281,9 @@ func (l *LobbyManager) GetLobbyCreateTransaction() (*LobbyTransaction, Result) {
 	}
 
 	var transaction unsafe.Pointer
-	result := discordcgo.LobbyManagerGetLobbyCreateTransaction(l.manager, unsafe.Pointer(&transaction))
+	result := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetLobbyCreateTransaction(l.manager, unsafe.Pointer(&transaction))
+	})
 
 	if result != int32(ResultOk) {
 		return nil, Result(result)
@@ -262,7 +299,9 @@ func (l *LobbyManager) GetLobbyUpdateTransaction(lobbyID int64) (*LobbyTransacti
 	}
 
 	var transaction unsafe.Pointer
-	result := discordcgo.LobbyManagerGetLobbyUpdateTransaction(l.manager, lobbyID, unsafe.Pointer(&transaction))
+	result := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetLobbyUpdateTransaction(l.manager, lobbyID, unsafe.Pointer(&transaction))
+	})
 
 	if result != int32(ResultOk) {
 		return nil, Result(result)
@@ -277,7 +316,9 @@ func (t *LobbyTransaction) SetType(lobbyType LobbyType) Result {
 		return ResultInternalError
 	}
 
-	return Result(discordcgo.LobbyTransactionSetType(t.transaction, int32(lobbyType)))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyTransactionSetType(t.transaction, int32(lobbyType))
+	}))
 }
 
 // SetOwner sets the lobby owner
@@ -286,7 +327,9 @@ func (t *LobbyTransaction) SetOwner(ownerID int64) Result {
 		return ResultInternalError
 	}
 
-	return Result(discordcgo.LobbyTransactionSetOwner(t.transaction, ownerID))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyTransactionSetOwner(t.transaction, ownerID)
+	}))
 }
 
 // SetCapacity sets the lobby capacity
@@ -295,7 +338,9 @@ func (t *LobbyTransaction) SetCapacity(capacity uint32) Result {
 		return ResultInternalError
 	}
 
-	return Result(discordcgo.LobbyTransactionSetCapacity(t.transaction, capacity))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyTransactionSetCapacity(t.transaction, capacity)
+	}))
 }
 
 // SetMetadata sets lobby metadata
@@ -307,7 +352,9 @@ func (t *LobbyTransaction) SetMetadata(key, value string) Result {
 	defer dcgo.FreeCChar(cKey)
 	cValue := dcgo.GoStringToCChar(value)
 	defer dcgo.FreeCChar(cValue)
-	return Result(discordcgo.LobbyTransactionSetMetadata(t.transaction, cKey, cValue))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyTransactionSetMetadata(t.transaction, cKey, cValue)
+	}))
 }
 
 // DeleteMetadata deletes lobby metadata
@@ -317,7 +364,9 @@ func (t *LobbyTransaction) DeleteMetadata(key string) Result {
 	}
 	cKey := dcgo.GoStringToCChar(key)
 	defer dcgo.FreeCChar(cKey)
-	return Result(discordcgo.LobbyTransactionDeleteMetadata(t.transaction, cKey))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyTransactionDeleteMetadata(t.transaction, cKey)
+	}))
 }
 
 // SetLocked sets the lobby locked state
@@ -326,7 +375,9 @@ func (t *LobbyTransaction) SetLocked(locked bool) Result {
 		return ResultInternalError
 	}
 
-	return Result(discordcgo.LobbyTransactionSetLocked(t.transaction, locked))
+	return Result(dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyTransactionSetLocked(t.transaction, locked)
+	}))
 }
 
 // Core-level Go functions for new IDiscordLobbyManager methods
@@ -340,13 +391,19 @@ func (t *LobbyTransaction) SetLocked(locked bool) Result {
 func (lm *LobbyManager) ConnectLobbyWithActivitySecret(activitySecret string, callbackData, callback unsafe.Pointer) {
 	cSecret := dcgo.GoStringToCChar(activitySecret)
 	defer dcgo.FreeCChar(cSecret)
-	dcgo.LobbyManagerConnectLobbyWithActivitySecret(lm.manager, unsafe.Pointer(cSecret), callbackData, callback)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerConnectLobbyWithActivitySecret(lm.manager, unsafe.Pointer(cSecret), callbackData, callback)
+		return nil
+	})
 }
 
 // GetMemberUpdateTransaction gets a member update transaction
 func (lm *LobbyManager) GetMemberUpdateTransaction(lobbyID, userID int64) unsafe.Pointer {
 	var transaction unsafe.Pointer
-	dcgo.LobbyManagerGetMemberUpdateTransaction(lm.manager, lobbyID, userID, unsafe.Pointer(&transaction))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerGetMemberUpdateTransaction(lm.manager, lobbyID, userID, unsafe.Pointer(&transaction))
+		return nil
+	})
 	return transaction
 }
 
@@ -355,42 +412,54 @@ func (lm *LobbyManager) GetLobbyMetadataValue(lobbyID int64, key string) (string
 	var value [4096]byte
 	cKey := dcgo.GoStringToCChar(key)
 	defer dcgo.FreeCChar(cKey)
-	res := dcgo.LobbyManagerGetLobbyMetadataValue(lm.manager, lobbyID, unsafe.Pointer(cKey), unsafe.Pointer(&value[0]))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetLobbyMetadataValue(lm.manager, lobbyID, unsafe.Pointer(cKey), unsafe.Pointer(&value[0]))
+	})
 	return dcgo.GoString(cKey), res
 }
 
 // GetLobbyMetadataKey retrieves a metadata key for a lobby by index
 func (lm *LobbyManager) GetLobbyMetadataKey(lobbyID int64, index int32) (string, int32) {
 	var key [256]byte
-	res := dcgo.LobbyManagerGetLobbyMetadataKey(lm.manager, lobbyID, index, unsafe.Pointer(&key[0]))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetLobbyMetadataKey(lm.manager, lobbyID, index, unsafe.Pointer(&key[0]))
+	})
 	return dcgo.GoStringFromBytes(&key[0]), res
 }
 
 // LobbyMetadataCount returns the number of metadata entries for a lobby
 func (lm *LobbyManager) LobbyMetadataCount(lobbyID int64) (int32, int32) {
 	var count int32
-	res := dcgo.LobbyManagerLobbyMetadataCount(lm.manager, lobbyID, unsafe.Pointer(&count))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerLobbyMetadataCount(lm.manager, lobbyID, unsafe.Pointer(&count))
+	})
 	return count, res
 }
 
 // MemberCount returns the number of members in a lobby
 func (lm *LobbyManager) MemberCount(lobbyID int64) (int32, int32) {
 	var count int32
-	res := dcgo.LobbyManagerMemberCount(lm.manager, lobbyID, unsafe.Pointer(&count))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerMemberCount(lm.manager, lobbyID, unsafe.Pointer(&count))
+	})
 	return count, res
 }
 
 // GetMemberUserID retrieves a user ID for a member by index
 func (lm *LobbyManager) GetMemberUserID(lobbyID int64, index int32) (int64, int32) {
 	var userID int64
-	res := dcgo.LobbyManagerGetMemberUserID(lm.manager, lobbyID, index, unsafe.Pointer(&userID))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetMemberUserID(lm.manager, lobbyID, index, unsafe.Pointer(&userID))
+	})
 	return userID, res
 }
 
 // GetMemberUser retrieves a user struct for a member
 func (lm *LobbyManager) GetMemberUser(lobbyID, userID int64) (*User, int32) {
 	var user User
-	res := dcgo.LobbyManagerGetMemberUser(lm.manager, lobbyID, userID, unsafe.Pointer(&user))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetMemberUser(lm.manager, lobbyID, userID, unsafe.Pointer(&user))
+	})
 	return &user, res
 }
 
@@ -399,51 +468,71 @@ func (lm *LobbyManager) GetMemberMetadataValue(lobbyID, userID int64, key string
 	var value [4096]byte
 	cKey := dcgo.GoStringToCChar(key)
 	defer dcgo.FreeCChar(cKey)
-	res := dcgo.LobbyManagerGetMemberMetadataValue(lm.manager, lobbyID, userID, unsafe.Pointer(cKey), unsafe.Pointer(&value[0]))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetMemberMetadataValue(lm.manager, lobbyID, userID, unsafe.Pointer(cKey), unsafe.Pointer(&value[0]))
+	})
 	return dcgo.GoString(cKey), res
 }
 
 // GetMemberMetadataKey retrieves a metadata key for a member by index
 func (lm *LobbyManager) GetMemberMetadataKey(lobbyID, userID int64, index int32) (string, int32) {
 	var key [256]byte
-	res := dcgo.LobbyManagerGetMemberMetadataKey(lm.manager, lobbyID, userID, index, unsafe.Pointer(&key[0]))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetMemberMetadataKey(lm.manager, lobbyID, userID, index, unsafe.Pointer(&key[0]))
+	})
 	return dcgo.GoStringFromBytes(&key[0]), res
 }
 
 // MemberMetadataCount returns the number of metadata entries for a member
 func (lm *LobbyManager) MemberMetadataCount(lobbyID, userID int64) (int32, int32) {
 	var count int32
-	res := dcgo.LobbyManagerMemberMetadataCount(lm.manager, lobbyID, userID, unsafe.Pointer(&count))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerMemberMetadataCount(lm.manager, lobbyID, userID, unsafe.Pointer(&count))
+	})
 	return count, res
 }
 
 // UpdateMember updates a member using a transaction
 func (lm *LobbyManager) UpdateMember(lobbyID, userID int64, transaction unsafe.Pointer, callbackData, callback unsafe.Pointer) {
-	dcgo.LobbyManagerUpdateMember(lm.manager, lobbyID, userID, transaction, callbackData, callback)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerUpdateMember(lm.manager, lobbyID, userID, transaction, callbackData, callback)
+		return nil
+	})
 }
 
 // GetSearchQuery gets a search query object
 func (lm *LobbyManager) GetSearchQuery() unsafe.Pointer {
 	var query unsafe.Pointer
-	dcgo.LobbyManagerGetSearchQuery(lm.manager, unsafe.Pointer(&query))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerGetSearchQuery(lm.manager, unsafe.Pointer(&query))
+		return nil
+	})
 	return query
 }
 
 // Search performs a lobby search
 func (lm *LobbyManager) Search(query unsafe.Pointer, callbackData, callback unsafe.Pointer) {
-	dcgo.LobbyManagerSearch(lm.manager, query, callbackData, callback)
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerSearch(lm.manager, query, callbackData, callback)
+		return nil
+	})
 }
 
 // LobbyCount returns the number of lobbies
 func (lm *LobbyManager) LobbyCount() int32 {
 	var count int32
-	dcgo.LobbyManagerLobbyCount(lm.manager, unsafe.Pointer(&count))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.LobbyManagerLobbyCount(lm.manager, unsafe.Pointer(&count))
+		return nil
+	})
 	return count
 }
 
 // GetLobbyID retrieves a lobby ID by index
 func (lm *LobbyManager) GetLobbyID(index int32) (int64, int32) {
 	var lobbyID int64
-	res := dcgo.LobbyManagerGetLobbyID(lm.manager, index, unsafe.Pointer(&lobbyID))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.LobbyManagerGetLobbyID(lm.manager, index, unsafe.Pointer(&lobbyID))
+	})
 	return lobbyID, res
 }

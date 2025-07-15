@@ -1,6 +1,6 @@
 # Makefile for Discord Game SDK Go Wrapper
 
-.PHONY: help sdk-download sdk-check build build-win-dll examples examples-win-dll clean test install quickstart
+.PHONY: help sdk-download sdk-check build build-win-dll examples examples-win-dll clean test install quickstart example
 
 # Default target
 help:
@@ -14,6 +14,7 @@ help:
 	@echo "  test         - Run tests"
 	@echo "  install      - Download SDK and build main package"
 	@echo "  quickstart   - Download SDK and build examples"
+	@echo "  example      - Build a single example: make example NAME=activity"
 
 # Detect system architecture
 ifeq ($(OS),Windows_NT)
@@ -136,3 +137,16 @@ install: sdk-download build
 # Quick start - download SDK and build examples
 quickstart: sdk-download examples
 	@echo "Quick start complete! Examples built in examples/bin/" 
+
+# Build a single example by name
+example: sdk-check
+ifeq ($(OS),Windows_NT)
+	@if not exist examples\bin mkdir examples\bin
+	@echo Building example $(NAME)...
+	@go build -o examples\bin\$(NAME).exe examples\$(NAME)\main.go
+	@$(MAKE) examples-win-dll
+else
+	@mkdir -p examples/bin
+	@echo "Building example $(NAME)..."
+	@go build -o examples/bin/$(NAME) examples/$(NAME)/main.go
+endif 

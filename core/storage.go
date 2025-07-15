@@ -17,16 +17,27 @@ func (s *StorageManager) Read(name string, data []byte) (int, Result) {
 		return 0, ResultInternalError
 	}
 	var read uint32
-	res := dcgo.StorageManagerReadGo(s.manager, name, data, &read)
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.StorageManagerReadGo(s.manager, name, data, &read)
+	})
 	return int(read), Result(res)
 }
 
 // ReadAsync reads data from storage asynchronously
 func (s *StorageManager) ReadAsync(name string, callback func(result Result, data []byte)) {
-	// Not implemented: would require cgo callback trampoline
-	if callback != nil {
-		callback(ResultInternalError, nil)
+	if s.manager == nil {
+		if callback != nil {
+			callback(ResultInternalError, nil)
+		}
+		return
 	}
+	cname := dcgo.GoStringToCChar(name)
+	defer dcgo.FreeCChar(cname)
+	dcgo.StorageManagerReadAsync(s.manager, cname, func(result int32, data []byte) {
+		if callback != nil {
+			callback(Result(result), data)
+		}
+	})
 }
 
 // ReadAsyncPartial reads partial data from storage asynchronously
@@ -42,16 +53,31 @@ func (s *StorageManager) Write(name string, data []byte) Result {
 	if s.manager == nil {
 		return ResultInternalError
 	}
-	res := dcgo.StorageManagerWriteGo(s.manager, name, data)
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.StorageManagerWriteGo(s.manager, name, data)
+	})
 	return Result(res)
 }
 
 // WriteAsync writes data to storage asynchronously
 func (s *StorageManager) WriteAsync(name string, data []byte, callback func(result Result)) {
-	// Not implemented: would require cgo callback trampoline
-	if callback != nil {
-		callback(ResultInternalError)
+	if s.manager == nil {
+		if callback != nil {
+			callback(ResultInternalError)
+		}
+		return
 	}
+	cname := dcgo.GoStringToCChar(name)
+	defer dcgo.FreeCChar(cname)
+	var datPtr unsafe.Pointer
+	if len(data) > 0 {
+		datPtr = unsafe.Pointer(&data[0])
+	}
+	dcgo.StorageManagerWriteAsync(s.manager, cname, datPtr, uint32(len(data)), func(result int32) {
+		if callback != nil {
+			callback(Result(result))
+		}
+	})
 }
 
 // Delete deletes a file from storage
@@ -59,7 +85,9 @@ func (s *StorageManager) Delete(name string) Result {
 	if s.manager == nil {
 		return ResultInternalError
 	}
-	res := dcgo.StorageManagerDeleteGo(s.manager, name)
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.StorageManagerDeleteGo(s.manager, name)
+	})
 	return Result(res)
 }
 
@@ -69,7 +97,9 @@ func (s *StorageManager) Exists(name string) (bool, Result) {
 		return false, ResultInternalError
 	}
 	var exists bool
-	res := dcgo.StorageManagerExistsGo(s.manager, name, &exists)
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.StorageManagerExistsGo(s.manager, name, &exists)
+	})
 	return exists, Result(res)
 }
 
@@ -79,7 +109,10 @@ func (s *StorageManager) Count() (int32, Result) {
 		return 0, ResultInternalError
 	}
 	var count int32
-	dcgo.StorageManagerCount(s.manager, unsafe.Pointer(&count))
+	dcgo.RunOnDispatcherSync(func() any {
+		dcgo.StorageManagerCount(s.manager, unsafe.Pointer(&count))
+		return nil
+	})
 	return count, ResultOk
 }
 
@@ -89,7 +122,9 @@ func (s *StorageManager) Stat(name string) (*FileStat, Result) {
 		return nil, ResultInternalError
 	}
 	var cstat dcgo.DiscordFileStat
-	res := dcgo.StorageManagerStatGo(s.manager, name, unsafe.Pointer(&cstat))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.StorageManagerStatGo(s.manager, name, unsafe.Pointer(&cstat))
+	})
 	if res != 0 {
 		return nil, Result(res)
 	}
@@ -102,7 +137,9 @@ func (s *StorageManager) StatAt(index int32) (*FileStat, Result) {
 		return nil, ResultInternalError
 	}
 	var cstat dcgo.DiscordFileStat
-	res := dcgo.StorageManagerStatAtGo(s.manager, index, unsafe.Pointer(&cstat))
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.StorageManagerStatAtGo(s.manager, index, unsafe.Pointer(&cstat))
+	})
 	if res != 0 {
 		return nil, Result(res)
 	}
@@ -114,12 +151,14 @@ func (s *StorageManager) GetPath() (string, Result) {
 	if s.manager == nil {
 		return "", ResultInternalError
 	}
-	var cpath dcgo.DiscordPath
-	res := dcgo.StorageManagerGetPathGo(s.manager, unsafe.Pointer(&cpath))
+	var path [4096]byte
+	res := dcgo.RunOnDispatcherSync(func() int32 {
+		return dcgo.StorageManagerGetPathGo(s.manager, unsafe.Pointer(&path[0]))
+	})
 	if res != 0 {
 		return "", Result(res)
 	}
-	return dcgo.GoString(&cpath[0]), ResultOk
+	return string(path[:]), ResultOk
 }
 
 // Helper for FileStat conversion

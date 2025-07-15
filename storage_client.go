@@ -29,7 +29,12 @@ func (sc *StorageClient) Read(name string) ([]byte, error) {
 func (sc *StorageClient) ReadAsync(name string) (<-chan []byte, <-chan error) {
 	dataChan := make(chan []byte, 1)
 	errChan := make(chan error, 1)
-
+	if sc.manager == nil {
+		errChan <- fmt.Errorf("storage manager not available")
+		close(dataChan)
+		close(errChan)
+		return dataChan, errChan
+	}
 	sc.manager.ReadAsync(name, func(result core.Result, data []byte) {
 		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to read async: %v", result)
@@ -41,7 +46,6 @@ func (sc *StorageClient) ReadAsync(name string) (<-chan []byte, <-chan error) {
 		close(dataChan)
 		close(errChan)
 	})
-
 	return dataChan, errChan
 }
 
@@ -60,7 +64,11 @@ func (sc *StorageClient) Write(name string, data []byte) error {
 // WriteAsync writes data to storage asynchronously
 func (sc *StorageClient) WriteAsync(name string, data []byte) <-chan error {
 	errChan := make(chan error, 1)
-
+	if sc.manager == nil {
+		errChan <- fmt.Errorf("storage manager not available")
+		close(errChan)
+		return errChan
+	}
 	sc.manager.WriteAsync(name, data, func(result core.Result) {
 		if result != core.ResultOk {
 			errChan <- fmt.Errorf("failed to write async: %v", result)
@@ -69,7 +77,6 @@ func (sc *StorageClient) WriteAsync(name string, data []byte) <-chan error {
 		}
 		close(errChan)
 	})
-
 	return errChan
 }
 
