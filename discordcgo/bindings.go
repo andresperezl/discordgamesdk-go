@@ -111,6 +111,14 @@ func CoreGetAchievementManager(core unsafe.Pointer) unsafe.Pointer {
 	return unsafe.Pointer(C.discord_core_get_achievement_manager(core))
 }
 
+func CoreGetImageManager(core unsafe.Pointer) unsafe.Pointer {
+	return unsafe.Pointer(C.discord_core_get_image_manager(core))
+}
+
+func CoreGetRelationshipManager(core unsafe.Pointer) unsafe.Pointer {
+	return unsafe.Pointer(C.discord_core_get_relationship_manager(core))
+}
+
 // Application manager wrappers
 func ApplicationManagerValidateOrExit(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
 	C.discord_application_manager_validate_or_exit((*C.struct_IDiscordApplicationManager)(manager), callbackData, (*[0]byte)(callback))
@@ -716,6 +724,11 @@ func GoString(cstr *C.char) string {
 	return C.GoString(cstr)
 }
 
+// GoStringFromBytes helper for byte buffers
+func GoStringFromBytes(b *byte) string {
+	return C.GoString((*C.char)(unsafe.Pointer(b)))
+}
+
 // Go-friendly StoreManager SKU helpers
 func StoreManagerGetSkuGo(manager unsafe.Pointer, skuID int64) *DiscordSku {
 	ptr := MallocDiscordSku()
@@ -772,4 +785,101 @@ func LobbyManagerGetLobbyGo(manager unsafe.Pointer, lobbyID int64) (id int64, ty
 
 func LobbyManagerGetLobbyActivitySecret(manager unsafe.Pointer, lobbyID int64, secret unsafe.Pointer) int32 {
 	return int32(C.discord_lobby_manager_get_lobby_activity_secret((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.DiscordLobbySecret)(secret)))
+}
+
+// Image manager wrappers
+func ImageManagerFetch(manager unsafe.Pointer, handle unsafe.Pointer, refresh bool, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_image_manager_fetch((*C.struct_IDiscordImageManager)(manager), *(*C.struct_DiscordImageHandle)(handle), C.bool(refresh), callbackData, (*[0]byte)(callback))
+}
+
+func ImageManagerGetDimensions(manager unsafe.Pointer, handle unsafe.Pointer, dimensions unsafe.Pointer) int32 {
+	return int32(C.discord_image_manager_get_dimensions((*C.struct_IDiscordImageManager)(manager), *(*C.struct_DiscordImageHandle)(handle), (*C.struct_DiscordImageDimensions)(dimensions)))
+}
+
+func ImageManagerGetData(manager unsafe.Pointer, handle unsafe.Pointer, data unsafe.Pointer, dataLength uint32) int32 {
+	return int32(C.discord_image_manager_get_data((*C.struct_IDiscordImageManager)(manager), *(*C.struct_DiscordImageHandle)(handle), (*C.uint8_t)(data), C.uint32_t(dataLength)))
+}
+
+// Relationship manager wrappers
+func RelationshipManagerFilter(manager unsafe.Pointer, filterData unsafe.Pointer, filter unsafe.Pointer) {
+	C.discord_relationship_manager_filter((*C.struct_IDiscordRelationshipManager)(manager), filterData, (*[0]byte)(filter))
+}
+
+func RelationshipManagerCount(manager unsafe.Pointer, count unsafe.Pointer) int32 {
+	return int32(C.discord_relationship_manager_count((*C.struct_IDiscordRelationshipManager)(manager), (*C.int32_t)(count)))
+}
+
+func RelationshipManagerGet(manager unsafe.Pointer, userID int64, relationship unsafe.Pointer) int32 {
+	return int32(C.discord_relationship_manager_get((*C.struct_IDiscordRelationshipManager)(manager), C.DiscordUserId(userID), (*C.struct_DiscordRelationship)(relationship)))
+}
+
+func RelationshipManagerGetAt(manager unsafe.Pointer, index uint32, relationship unsafe.Pointer) int32 {
+	return int32(C.discord_relationship_manager_get_at((*C.struct_IDiscordRelationshipManager)(manager), C.uint32_t(index), (*C.struct_DiscordRelationship)(relationship)))
+}
+
+// Additional missing lobby manager wrappers
+func LobbyManagerConnectLobbyWithActivitySecret(manager unsafe.Pointer, activitySecret unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_lobby_manager_connect_lobby_with_activity_secret((*C.struct_IDiscordLobbyManager)(manager), (*C.char)(activitySecret), callbackData, (*[0]byte)(callback))
+}
+
+func LobbyManagerGetMemberUpdateTransaction(manager unsafe.Pointer, lobbyID int64, userID int64, transaction unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_member_update_transaction((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), C.DiscordUserId(userID), (**C.struct_IDiscordLobbyMemberTransaction)(transaction)))
+}
+
+// NOTE: key must be a pointer to [256]C.char, value to [4096]C.char, cast as *C.char
+func LobbyManagerGetLobbyMetadataValue(manager unsafe.Pointer, lobbyID int64, key unsafe.Pointer, value unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_lobby_metadata_value((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.char)(key), (*C.char)(value)))
+}
+
+func LobbyManagerGetLobbyMetadataKey(manager unsafe.Pointer, lobbyID int64, index int32, key unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_lobby_metadata_key((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), C.int32_t(index), (*C.char)(key)))
+}
+
+func LobbyManagerLobbyMetadataCount(manager unsafe.Pointer, lobbyID int64, count unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_lobby_metadata_count((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.int32_t)(count)))
+}
+
+func LobbyManagerMemberCount(manager unsafe.Pointer, lobbyID int64, count unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_member_count((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.int32_t)(count)))
+}
+
+func LobbyManagerGetMemberUserID(manager unsafe.Pointer, lobbyID int64, index int32, userID unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_member_user_id((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), C.int32_t(index), (*C.DiscordUserId)(userID)))
+}
+
+func LobbyManagerGetMemberUser(manager unsafe.Pointer, lobbyID int64, userID int64, user unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_member_user((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), C.DiscordUserId(userID), (*C.struct_DiscordUser)(user)))
+}
+
+// NOTE: key must be a pointer to [256]C.char, value to [4096]C.char, cast as *C.char
+func LobbyManagerGetMemberMetadataValue(manager unsafe.Pointer, lobbyID int64, userID int64, key unsafe.Pointer, value unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_member_metadata_value((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), C.DiscordUserId(userID), (*C.char)(key), (*C.char)(value)))
+}
+
+func LobbyManagerGetMemberMetadataKey(manager unsafe.Pointer, lobbyID int64, userID int64, index int32, key unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_member_metadata_key((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), C.DiscordUserId(userID), C.int32_t(index), (*C.char)(key)))
+}
+
+func LobbyManagerMemberMetadataCount(manager unsafe.Pointer, lobbyID int64, userID int64, count unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_member_metadata_count((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), C.DiscordUserId(userID), (*C.int32_t)(count)))
+}
+
+func LobbyManagerUpdateMember(manager unsafe.Pointer, lobbyID int64, userID int64, transaction unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_lobby_manager_update_member((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), C.DiscordUserId(userID), (*C.struct_IDiscordLobbyMemberTransaction)(transaction), callbackData, (*[0]byte)(callback))
+}
+
+func LobbyManagerGetSearchQuery(manager unsafe.Pointer, query unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_search_query((*C.struct_IDiscordLobbyManager)(manager), (**C.struct_IDiscordLobbySearchQuery)(query)))
+}
+
+func LobbyManagerSearch(manager unsafe.Pointer, query unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	C.discord_lobby_manager_search((*C.struct_IDiscordLobbyManager)(manager), (*C.struct_IDiscordLobbySearchQuery)(query), callbackData, (*[0]byte)(callback))
+}
+
+func LobbyManagerLobbyCount(manager unsafe.Pointer, count unsafe.Pointer) {
+	C.discord_lobby_manager_lobby_count((*C.struct_IDiscordLobbyManager)(manager), (*C.int32_t)(count))
+}
+
+func LobbyManagerGetLobbyID(manager unsafe.Pointer, index int32, lobbyID unsafe.Pointer) int32 {
+	return int32(C.discord_lobby_manager_get_lobby_id((*C.struct_IDiscordLobbyManager)(manager), C.int32_t(index), (*C.DiscordLobbyId)(lobbyID)))
 }

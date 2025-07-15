@@ -328,3 +328,122 @@ func (t *LobbyTransaction) SetLocked(locked bool) Result {
 
 	return Result(discordcgo.LobbyTransactionSetLocked(t.transaction, locked))
 }
+
+// Core-level Go functions for new IDiscordLobbyManager methods
+// (import block to be removed)
+// import (
+// 	"unsafe"
+// 	dcgo "github.com/andresperezl/discordctl/discordcgo"
+// )
+
+// ConnectLobbyWithActivitySecret connects to a lobby using an activity secret
+func (lm *LobbyManager) ConnectLobbyWithActivitySecret(activitySecret string, callbackData, callback unsafe.Pointer) {
+	cSecret := dcgo.GoStringToCChar(activitySecret)
+	defer dcgo.FreeCChar(cSecret)
+	dcgo.LobbyManagerConnectLobbyWithActivitySecret(lm.manager, unsafe.Pointer(cSecret), callbackData, callback)
+}
+
+// GetMemberUpdateTransaction gets a member update transaction
+func (lm *LobbyManager) GetMemberUpdateTransaction(lobbyID, userID int64) unsafe.Pointer {
+	var transaction unsafe.Pointer
+	dcgo.LobbyManagerGetMemberUpdateTransaction(lm.manager, lobbyID, userID, unsafe.Pointer(&transaction))
+	return transaction
+}
+
+// GetLobbyMetadataValue retrieves a metadata value for a lobby
+func (lm *LobbyManager) GetLobbyMetadataValue(lobbyID int64, key string) (string, int32) {
+	var value [4096]byte
+	cKey := dcgo.GoStringToCChar(key)
+	defer dcgo.FreeCChar(cKey)
+	res := dcgo.LobbyManagerGetLobbyMetadataValue(lm.manager, lobbyID, unsafe.Pointer(cKey), unsafe.Pointer(&value[0]))
+	return dcgo.GoString(cKey), res
+}
+
+// GetLobbyMetadataKey retrieves a metadata key for a lobby by index
+func (lm *LobbyManager) GetLobbyMetadataKey(lobbyID int64, index int32) (string, int32) {
+	var key [256]byte
+	res := dcgo.LobbyManagerGetLobbyMetadataKey(lm.manager, lobbyID, index, unsafe.Pointer(&key[0]))
+	return dcgo.GoStringFromBytes(&key[0]), res
+}
+
+// LobbyMetadataCount returns the number of metadata entries for a lobby
+func (lm *LobbyManager) LobbyMetadataCount(lobbyID int64) (int32, int32) {
+	var count int32
+	res := dcgo.LobbyManagerLobbyMetadataCount(lm.manager, lobbyID, unsafe.Pointer(&count))
+	return count, res
+}
+
+// MemberCount returns the number of members in a lobby
+func (lm *LobbyManager) MemberCount(lobbyID int64) (int32, int32) {
+	var count int32
+	res := dcgo.LobbyManagerMemberCount(lm.manager, lobbyID, unsafe.Pointer(&count))
+	return count, res
+}
+
+// GetMemberUserID retrieves a user ID for a member by index
+func (lm *LobbyManager) GetMemberUserID(lobbyID int64, index int32) (int64, int32) {
+	var userID int64
+	res := dcgo.LobbyManagerGetMemberUserID(lm.manager, lobbyID, index, unsafe.Pointer(&userID))
+	return userID, res
+}
+
+// GetMemberUser retrieves a user struct for a member
+func (lm *LobbyManager) GetMemberUser(lobbyID, userID int64) (*User, int32) {
+	var user User
+	res := dcgo.LobbyManagerGetMemberUser(lm.manager, lobbyID, userID, unsafe.Pointer(&user))
+	return &user, res
+}
+
+// GetMemberMetadataValue retrieves a metadata value for a member
+func (lm *LobbyManager) GetMemberMetadataValue(lobbyID, userID int64, key string) (string, int32) {
+	var value [4096]byte
+	cKey := dcgo.GoStringToCChar(key)
+	defer dcgo.FreeCChar(cKey)
+	res := dcgo.LobbyManagerGetMemberMetadataValue(lm.manager, lobbyID, userID, unsafe.Pointer(cKey), unsafe.Pointer(&value[0]))
+	return dcgo.GoString(cKey), res
+}
+
+// GetMemberMetadataKey retrieves a metadata key for a member by index
+func (lm *LobbyManager) GetMemberMetadataKey(lobbyID, userID int64, index int32) (string, int32) {
+	var key [256]byte
+	res := dcgo.LobbyManagerGetMemberMetadataKey(lm.manager, lobbyID, userID, index, unsafe.Pointer(&key[0]))
+	return dcgo.GoStringFromBytes(&key[0]), res
+}
+
+// MemberMetadataCount returns the number of metadata entries for a member
+func (lm *LobbyManager) MemberMetadataCount(lobbyID, userID int64) (int32, int32) {
+	var count int32
+	res := dcgo.LobbyManagerMemberMetadataCount(lm.manager, lobbyID, userID, unsafe.Pointer(&count))
+	return count, res
+}
+
+// UpdateMember updates a member using a transaction
+func (lm *LobbyManager) UpdateMember(lobbyID, userID int64, transaction unsafe.Pointer, callbackData, callback unsafe.Pointer) {
+	dcgo.LobbyManagerUpdateMember(lm.manager, lobbyID, userID, transaction, callbackData, callback)
+}
+
+// GetSearchQuery gets a search query object
+func (lm *LobbyManager) GetSearchQuery() unsafe.Pointer {
+	var query unsafe.Pointer
+	dcgo.LobbyManagerGetSearchQuery(lm.manager, unsafe.Pointer(&query))
+	return query
+}
+
+// Search performs a lobby search
+func (lm *LobbyManager) Search(query unsafe.Pointer, callbackData, callback unsafe.Pointer) {
+	dcgo.LobbyManagerSearch(lm.manager, query, callbackData, callback)
+}
+
+// LobbyCount returns the number of lobbies
+func (lm *LobbyManager) LobbyCount() int32 {
+	var count int32
+	dcgo.LobbyManagerLobbyCount(lm.manager, unsafe.Pointer(&count))
+	return count
+}
+
+// GetLobbyID retrieves a lobby ID by index
+func (lm *LobbyManager) GetLobbyID(index int32) (int64, int32) {
+	var lobbyID int64
+	res := dcgo.LobbyManagerGetLobbyID(lm.manager, index, unsafe.Pointer(&lobbyID))
+	return lobbyID, res
+}
