@@ -5,6 +5,7 @@ import (
 	"unsafe"
 
 	dcgo "github.com/andresperezl/discordctl/discordcgo"
+	discordlog "github.com/andresperezl/discordctl/discordlog"
 )
 
 // ActivityManager provides access to activity-related functionality
@@ -20,7 +21,9 @@ func (a *ActivityManager) SetCore(core *Core) {
 
 // RegisterCommand registers a command for the activity
 func (a *ActivityManager) RegisterCommand(command string) Result {
+	discordlog.GetLogger().Info("ActivityManager.RegisterCommand called", "command", command)
 	if a.ptr == nil {
+		discordlog.GetLogger().Warn("ActivityManager.RegisterCommand: manager is nil")
 		return ResultInternalError
 	}
 	cCommand := dcgo.GoStringToCChar(command)
@@ -28,23 +31,29 @@ func (a *ActivityManager) RegisterCommand(command string) Result {
 	res := dcgo.RunOnDispatcherSync(func() int32 {
 		return dcgo.ActivityManagerRegisterCommand(a.ptr, cCommand)
 	})
+	discordlog.GetLogger().Info("ActivityManager.RegisterCommand finished", "command", command, "result", Result(res))
 	return Result(res)
 }
 
 // RegisterSteam registers a Steam ID for the activity
 func (a *ActivityManager) RegisterSteam(steamID uint32) Result {
+	discordlog.GetLogger().Info("ActivityManager.RegisterSteam called", "steamID", steamID)
 	if a.ptr == nil {
+		discordlog.GetLogger().Warn("ActivityManager.RegisterSteam: manager is nil")
 		return ResultInternalError
 	}
 	res := dcgo.RunOnDispatcherSync(func() int32 {
 		return dcgo.ActivityManagerRegisterSteam(a.ptr, steamID)
 	})
+	discordlog.GetLogger().Info("ActivityManager.RegisterSteam finished", "steamID", steamID, "result", Result(res))
 	return Result(res)
 }
 
 // UpdateActivity updates the current activity with proper callback handling
 func (a *ActivityManager) UpdateActivity(activity *Activity, callback func(result Result)) {
+	discordlog.GetLogger().Info("ActivityManager.UpdateActivity called", "activity", activity)
 	if a.ptr == nil {
+		discordlog.GetLogger().Warn("ActivityManager.UpdateActivity: manager is nil")
 		if callback != nil {
 			callback(ResultInternalError)
 		}
@@ -132,10 +141,12 @@ func (a *ActivityManager) UpdateActivity(activity *Activity, callback func(resul
 		// Fallback for immediate callback
 		callback(ResultOk)
 	}
+	discordlog.GetLogger().Info("ActivityManager.UpdateActivity finished", "activity", activity, "callbackID", callbackID)
 }
 
 // UpdateActivityAsync updates the current activity and returns a channel for the result
 func (a *ActivityManager) UpdateActivityAsync(activity *Activity) chan Result {
+	discordlog.GetLogger().Info("ActivityManager.UpdateActivityAsync called", "activity", activity)
 	resultChan := make(chan Result, 1)
 
 	a.UpdateActivity(activity, func(result Result) {
@@ -143,12 +154,15 @@ func (a *ActivityManager) UpdateActivityAsync(activity *Activity) chan Result {
 		close(resultChan)
 	})
 
+	discordlog.GetLogger().Info("ActivityManager.UpdateActivityAsync finished", "activity", activity, "resultChan", resultChan)
 	return resultChan
 }
 
 // ClearActivity clears the current activity with proper callback handling
 func (a *ActivityManager) ClearActivity(callback func(result Result)) {
+	discordlog.GetLogger().Info("ActivityManager.ClearActivity called")
 	if a.ptr == nil {
+		discordlog.GetLogger().Warn("ActivityManager.ClearActivity: manager is nil")
 		if callback != nil {
 			callback(ResultInternalError)
 		}
@@ -180,10 +194,12 @@ func (a *ActivityManager) ClearActivity(callback func(result Result)) {
 		// Fallback for immediate callback
 		callback(ResultOk)
 	}
+	discordlog.GetLogger().Info("ActivityManager.ClearActivity finished", "callbackID", callbackID)
 }
 
 // ClearActivityAsync clears the current activity and returns a channel for the result
 func (a *ActivityManager) ClearActivityAsync() chan Result {
+	discordlog.GetLogger().Info("ActivityManager.ClearActivityAsync called")
 	resultChan := make(chan Result, 1)
 
 	a.ClearActivity(func(result Result) {
@@ -191,12 +207,15 @@ func (a *ActivityManager) ClearActivityAsync() chan Result {
 		close(resultChan)
 	})
 
+	discordlog.GetLogger().Info("ActivityManager.ClearActivityAsync finished", "resultChan", resultChan)
 	return resultChan
 }
 
 // SendRequestReply sends a reply to a join request with proper callback handling
 func (a *ActivityManager) SendRequestReply(userID int64, reply ActivityJoinRequestReply, callback func(result Result)) {
+	discordlog.GetLogger().Info("ActivityManager.SendRequestReply called", "userID", userID, "reply", reply)
 	if a.ptr == nil {
+		discordlog.GetLogger().Warn("ActivityManager.SendRequestReply: manager is nil")
 		if callback != nil {
 			callback(ResultInternalError)
 		}
@@ -228,11 +247,14 @@ func (a *ActivityManager) SendRequestReply(userID int64, reply ActivityJoinReque
 		// Fallback for immediate callback
 		callback(ResultOk)
 	}
+	discordlog.GetLogger().Info("ActivityManager.SendRequestReply finished", "userID", userID, "reply", reply, "callbackID", callbackID)
 }
 
 // SendInvite sends an invite to a user with proper callback handling
 func (a *ActivityManager) SendInvite(userID int64, actionType ActivityActionType, content string, callback func(result Result)) {
+	discordlog.GetLogger().Info("ActivityManager.SendInvite called", "userID", userID, "actionType", actionType, "content", content)
 	if a.ptr == nil {
+		discordlog.GetLogger().Warn("ActivityManager.SendInvite: manager is nil")
 		if callback != nil {
 			callback(ResultInternalError)
 		}
@@ -260,11 +282,14 @@ func (a *ActivityManager) SendInvite(userID int64, actionType ActivityActionType
 	} else if callback != nil {
 		callback(ResultOk)
 	}
+	discordlog.GetLogger().Info("ActivityManager.SendInvite finished", "userID", userID, "actionType", actionType, "content", content, "callbackID", callbackID)
 }
 
 // AcceptInvite accepts an invite from a user with proper callback handling
 func (a *ActivityManager) AcceptInvite(userID int64, callback func(result Result)) {
+	discordlog.GetLogger().Info("ActivityManager.AcceptInvite called", "userID", userID)
 	if a.ptr == nil {
+		discordlog.GetLogger().Warn("ActivityManager.AcceptInvite: manager is nil")
 		if callback != nil {
 			callback(ResultInternalError)
 		}
@@ -296,4 +321,5 @@ func (a *ActivityManager) AcceptInvite(userID int64, callback func(result Result
 		// Fallback for immediate callback
 		callback(ResultOk)
 	}
+	discordlog.GetLogger().Info("ActivityManager.AcceptInvite finished", "userID", userID, "callbackID", callbackID)
 }

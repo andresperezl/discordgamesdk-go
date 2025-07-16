@@ -10,35 +10,64 @@ package discordcgo
 #include <stdlib.h>
 #ifdef _WIN32
 #include <windows.h>
-extern DWORD GetCurrentThreadId();
+// extern DWORD GetCurrentThreadId(); // Removed to avoid redeclaration warning
 #endif
 
+typedef struct DiscordOAuth2Token DiscordOAuth2Token;
 // Typedef for the Go callback trampoline
 typedef void (*go_storage_read_async_callback_t)(void* go_callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length);
 extern void go_storage_read_async_callback_trampoline(void* go_callback_data, enum EDiscordResult result, uint8_t* data, uint32_t data_length);
 
-int64_t get_discord_sku_id(struct DiscordSku* sku) { return sku->id; }
-int32_t get_discord_sku_type(struct DiscordSku* sku) { return sku->type; }
-void get_discord_sku_name(struct DiscordSku* sku, char* out, int outlen) { strncpy(out, sku->name, outlen-1); out[outlen-1] = '\0'; }
-uint32_t get_discord_sku_price_amount(struct DiscordSku* sku) { return sku->price.amount; }
-void get_discord_sku_price_currency(struct DiscordSku* sku, char* out, int outlen) { strncpy(out, sku->price.currency, outlen-1); out[outlen-1] = '\0'; }
+// Add extern for the Go lobby manager create lobby callback trampoline
+extern void LobbyManagerCreateLobbyCallback(void* callbackData, enum EDiscordResult result, struct DiscordLobby* lobby);
 
-int64_t get_discord_entitlement_id(struct DiscordEntitlement* ent) { return ent->id; }
-int32_t get_discord_entitlement_type(struct DiscordEntitlement* ent) { return ent->type; }
-int64_t get_discord_entitlement_sku_id(struct DiscordEntitlement* ent) { return ent->sku_id; }
-uint64_t get_discord_file_stat_size(struct DiscordFileStat* stat) { return stat->size; }
-uint64_t get_discord_file_stat_last_modified(struct DiscordFileStat* stat) { return stat->last_modified; }
-void get_discord_file_stat_filename(struct DiscordFileStat* stat, char* out, int outlen) { strncpy(out, stat->filename, outlen-1); out[outlen-1] = '\0'; }
+extern void ApplicationManagerValidateOrExitCallback(void* callbackData, enum EDiscordResult result);
+extern void ApplicationManagerGetOAuth2TokenCallback(void* callbackData, enum EDiscordResult result, struct DiscordOAuth2Token* token);
+extern void ApplicationManagerGetTicketCallback(void* callbackData, enum EDiscordResult result, char* data);
+extern void UserManagerGetUserCallback(void* callbackData, enum EDiscordResult result, struct DiscordUser* user);
+extern void ActivityManagerUpdateActivityCallback(void* callbackData, enum EDiscordResult result);
+extern void ActivityManagerClearActivityCallback(void* callbackData, enum EDiscordResult result);
+extern void ActivityManagerSendRequestReplyCallback(void* callbackData, enum EDiscordResult result);
+extern void ActivityManagerSendInviteCallback(void* callbackData, enum EDiscordResult result);
+extern void ActivityManagerAcceptInviteCallback(void* callbackData, enum EDiscordResult result);
 */
 import "C"
 import (
+	"log/slog"
 	"runtime"
 	runtimecgo "runtime/cgo"
 	"sync"
 	"unsafe"
 
-	"github.com/andresperezl/discordctl/core"
+	discordlog "github.com/andresperezl/discordctl/discordlog"
 )
+
+var (
+	loggerMu sync.RWMutex
+	logger   *slog.Logger
+)
+
+// SetLogger allows users to set a custom slog.Logger for SDK logging
+func SetLogger(l *slog.Logger) {
+	loggerMu.Lock()
+	defer loggerMu.Unlock()
+	logger = l
+}
+
+// getLogger returns the current logger, or a no-op logger if none is set
+func getLogger() *slog.Logger {
+	loggerMu.RLock()
+	defer loggerMu.RUnlock()
+	if logger != nil {
+		return logger
+	}
+	return slog.New(slog.NewTextHandler(nil, &slog.HandlerOptions{Level: slog.LevelError})) // no-op
+}
+
+// GetLogger returns the current logger, or a no-op logger if none is set (exported)
+func GetLogger() *slog.Logger {
+	return discordlog.GetLogger()
+}
 
 var dispatcherThreadID uint64
 
@@ -265,13 +294,6 @@ func CoreGetRelationshipManager(core unsafe.Pointer) unsafe.Pointer {
 }
 
 // Application manager wrappers
-func ApplicationManagerValidateOrExit(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_application_manager_validate_or_exit((*C.struct_IDiscordApplicationManager)(manager), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
 func ApplicationManagerGetCurrentLocale(manager unsafe.Pointer, locale unsafe.Pointer) {
 	RunOnDispatcherSync(func() any {
 		C.discord_application_manager_get_current_locale((*C.struct_IDiscordApplicationManager)(manager), (*C.DiscordLocale)(locale))
@@ -286,31 +308,10 @@ func ApplicationManagerGetCurrentBranch(manager unsafe.Pointer, branch unsafe.Po
 	})
 }
 
-func ApplicationManagerGetOAuth2Token(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_application_manager_get_oauth2_token((*C.struct_IDiscordApplicationManager)(manager), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func ApplicationManagerGetTicket(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_application_manager_get_ticket((*C.struct_IDiscordApplicationManager)(manager), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
 // User manager wrappers
 func UserManagerGetCurrentUser(manager unsafe.Pointer, user unsafe.Pointer) int32 {
 	return RunOnDispatcherSync(func() int32 {
 		return int32(C.discord_user_manager_get_current_user((*C.struct_IDiscordUserManager)(manager), (*C.struct_DiscordUser)(user)))
-	})
-}
-
-func UserManagerGetUser(manager unsafe.Pointer, userID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_user_manager_get_user((*C.struct_IDiscordUserManager)(manager), C.DiscordUserId(userID), callbackData, (*[0]byte)(callback))
-		return nil
 	})
 }
 
@@ -339,86 +340,10 @@ func ActivityManagerRegisterSteam(manager unsafe.Pointer, steamID uint32) int32 
 	})
 }
 
-func ActivityManagerUpdateActivity(manager unsafe.Pointer, activity unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_activity_manager_update_activity((*C.struct_IDiscordActivityManager)(manager), (*C.struct_DiscordActivity)(activity), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func ActivityManagerClearActivity(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_activity_manager_clear_activity((*C.struct_IDiscordActivityManager)(manager), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func ActivityManagerSendRequestReply(manager unsafe.Pointer, userID int64, reply int32, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_activity_manager_send_request_reply((*C.struct_IDiscordActivityManager)(manager), C.DiscordUserId(userID), C.enum_EDiscordActivityJoinRequestReply(reply), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func ActivityManagerSendInvite(manager unsafe.Pointer, userID int64, actionType int32, content *C.char, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_activity_manager_send_invite((*C.struct_IDiscordActivityManager)(manager), C.DiscordUserId(userID), C.enum_EDiscordActivityActionType(actionType), content, callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func ActivityManagerAcceptInvite(manager unsafe.Pointer, userID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_activity_manager_accept_invite((*C.struct_IDiscordActivityManager)(manager), C.DiscordUserId(userID), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
 // Lobby manager wrappers
 func LobbyManagerGetLobbyCreateTransaction(manager unsafe.Pointer, transaction unsafe.Pointer) int32 {
 	return RunOnDispatcherSync(func() int32 {
 		return int32(C.discord_lobby_manager_get_lobby_create_transaction((*C.struct_IDiscordLobbyManager)(manager), (**C.struct_IDiscordLobbyTransaction)(transaction)))
-	})
-}
-
-func LobbyManagerCreateLobby(manager unsafe.Pointer, transaction unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	C.discord_lobby_manager_create_lobby(
-		(*C.struct_IDiscordLobbyManager)(manager),
-		(*C.struct_IDiscordLobbyTransaction)(transaction),
-		callbackData,
-		C.LobbyManagerCreateLobbyCallback,
-	)
-}
-
-//export LobbyManagerCreateLobbyCallback
-func LobbyManagerCreateLobbyCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult, cLobby *C.struct_DiscordLobby) {
-	if callbackData == nil {
-		return
-	}
-	handle := *(*runtimecgo.Handle)(callbackData)
-	cb, ok := handle.Value().(func(core.Result, *core.Lobby))
-	if !ok {
-		return
-	}
-	var lobby *core.Lobby
-	if cLobby != nil {
-		lobby = &core.Lobby{
-			ID:       int64(cLobby.id),
-			Type:     core.LobbyType(cLobby.typ),
-			OwnerID:  int64(cLobby.owner_id),
-			Secret:   C.GoString(&cLobby.secret[0]),
-			Capacity: uint32(cLobby.capacity),
-			Locked:   bool(cLobby.locked),
-		}
-	}
-	cb(core.Result(result), lobby)
-	handle.Delete()
-}
-
-func LobbyManagerConnectLobby(manager unsafe.Pointer, lobbyID int64, secret unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_connect_lobby((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.char)(secret), callbackData, (*[0]byte)(callback))
-		return nil
 	})
 }
 
@@ -428,45 +353,9 @@ func LobbyManagerGetLobby(manager unsafe.Pointer, lobbyID int64, lobby unsafe.Po
 	})
 }
 
-func LobbyManagerUpdateLobby(manager unsafe.Pointer, lobbyID int64, transaction unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_update_lobby((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.struct_IDiscordLobbyTransaction)(transaction), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func LobbyManagerDeleteLobby(manager unsafe.Pointer, lobbyID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_delete_lobby((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func LobbyManagerDisconnectLobby(manager unsafe.Pointer, lobbyID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_disconnect_lobby((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func LobbyManagerSendLobbyMessage(manager unsafe.Pointer, lobbyID int64, data unsafe.Pointer, dataLength uint32, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_send_lobby_message((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.uint8_t)(data), C.uint32_t(dataLength), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func LobbyManagerConnectVoice(manager unsafe.Pointer, lobbyID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_connect_voice((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func LobbyManagerDisconnectVoice(manager unsafe.Pointer, lobbyID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_disconnect_voice((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), callbackData, (*[0]byte)(callback))
-		return nil
+func LobbyManagerGetLobbyActivitySecret(manager unsafe.Pointer, lobbyID int64, secret unsafe.Pointer) int32 {
+	return RunOnDispatcherSync(func() int32 {
+		return int32(C.discord_lobby_manager_get_lobby_activity_secret((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.DiscordLobbySecret)(secret)))
 	})
 }
 
@@ -609,48 +498,6 @@ func OverlayManagerIsLocked(manager unsafe.Pointer, locked unsafe.Pointer) {
 	})
 }
 
-func OverlayManagerSetLocked(manager unsafe.Pointer, locked bool, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_overlay_manager_set_locked((*C.struct_IDiscordOverlayManager)(manager), C.bool(locked), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func OverlayManagerOpenActivityInvite(manager unsafe.Pointer, actionType int32, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_overlay_manager_open_activity_invite((*C.struct_IDiscordOverlayManager)(manager), C.enum_EDiscordActivityActionType(actionType), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func OverlayManagerOpenGuildInvite(manager unsafe.Pointer, code *C.char, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_overlay_manager_open_guild_invite((*C.struct_IDiscordOverlayManager)(manager), code, callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func OverlayManagerOpenVoiceSettings(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_overlay_manager_open_voice_settings((*C.struct_IDiscordOverlayManager)(manager), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func OverlayManagerOpenGuildInviteHelper(manager unsafe.Pointer, code string, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		codeBytes := []byte(code)
-		var codePtr *C.char
-		if len(codeBytes) > 0 {
-			codePtr = (*C.char)(unsafe.Pointer(&codeBytes[0]))
-		} else {
-			codePtr = nil
-		}
-		C.discord_overlay_manager_open_guild_invite((*C.struct_IDiscordOverlayManager)(manager), codePtr, callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
 // Storage manager wrappers
 func StorageManagerRead(manager unsafe.Pointer, name *C.char, data unsafe.Pointer, dataLength uint32, read unsafe.Pointer) int32 {
 	return RunOnDispatcherSync(func() int32 {
@@ -717,14 +564,6 @@ func FreeCChar(cstr *C.char) {
 	if cstr != nil {
 		C.free(unsafe.Pointer(cstr))
 	}
-}
-
-// Additional storage manager wrappers
-func StorageManagerReadAsyncPartial(manager unsafe.Pointer, name *C.char, offset uint64, length uint64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_storage_manager_read_async_partial((*C.struct_IDiscordStorageManager)(manager), name, C.uint64_t(offset), C.uint64_t(length), callbackData, (*[0]byte)(callback))
-		return nil
-	})
 }
 
 func StorageManagerStat(manager unsafe.Pointer, name *C.char, stat unsafe.Pointer) int32 {
@@ -815,20 +654,6 @@ func OverlayManagerImeCancelComposition(manager unsafe.Pointer) {
 	})
 }
 
-func OverlayManagerSetImeCompositionRangeCallback(manager unsafe.Pointer, onImeCompositionRangeChangedData unsafe.Pointer, onImeCompositionRangeChanged unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_overlay_manager_set_ime_composition_range_callback((*C.struct_IDiscordOverlayManager)(manager), onImeCompositionRangeChangedData, (*[0]byte)(onImeCompositionRangeChanged))
-		return nil
-	})
-}
-
-func OverlayManagerSetImeSelectionBoundsCallback(manager unsafe.Pointer, onImeSelectionBoundsChangedData unsafe.Pointer, onImeSelectionBoundsChanged unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_overlay_manager_set_ime_selection_bounds_callback((*C.struct_IDiscordOverlayManager)(manager), onImeSelectionBoundsChangedData, (*[0]byte)(onImeSelectionBoundsChanged))
-		return nil
-	})
-}
-
 func OverlayManagerIsPointInsideClickZone(manager unsafe.Pointer, x int32, y int32) bool {
 	return RunOnDispatcherSync(func() bool {
 		return bool(C.discord_overlay_manager_is_point_inside_click_zone((*C.struct_IDiscordOverlayManager)(manager), C.int32_t(x), C.int32_t(y)))
@@ -836,13 +661,6 @@ func OverlayManagerIsPointInsideClickZone(manager unsafe.Pointer, x int32, y int
 }
 
 // Store manager wrappers
-func StoreManagerFetchSkus(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_store_manager_fetch_skus((*C.struct_IDiscordStoreManager)(manager), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
 func StoreManagerCountSkus(manager unsafe.Pointer, count unsafe.Pointer) {
 	RunOnDispatcherSync(func() any {
 		C.discord_store_manager_count_skus((*C.struct_IDiscordStoreManager)(manager), (*C.int32_t)(count))
@@ -859,13 +677,6 @@ func StoreManagerGetSku(manager unsafe.Pointer, skuID int64, sku unsafe.Pointer)
 func StoreManagerGetSkuAt(manager unsafe.Pointer, index int32, sku unsafe.Pointer) int32 {
 	return RunOnDispatcherSync(func() int32 {
 		return int32(C.discord_store_manager_get_sku_at((*C.struct_IDiscordStoreManager)(manager), C.int32_t(index), (*C.struct_DiscordSku)(sku)))
-	})
-}
-
-func StoreManagerFetchEntitlements(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_store_manager_fetch_entitlements((*C.struct_IDiscordStoreManager)(manager), callbackData, (*[0]byte)(callback))
-		return nil
 	})
 }
 
@@ -894,24 +705,10 @@ func StoreManagerHasSkuEntitlement(manager unsafe.Pointer, skuID int64, hasEntit
 	})
 }
 
-func StoreManagerStartPurchase(manager unsafe.Pointer, skuID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_store_manager_start_purchase((*C.struct_IDiscordStoreManager)(manager), C.DiscordSnowflake(skuID), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
 // Voice manager wrappers
 func VoiceManagerGetInputMode(manager unsafe.Pointer, inputMode unsafe.Pointer) int32 {
 	return RunOnDispatcherSync(func() int32 {
 		return int32(C.discord_voice_manager_get_input_mode((*C.struct_IDiscordVoiceManager)(manager), (*C.struct_DiscordInputMode)(inputMode)))
-	})
-}
-
-func VoiceManagerSetInputMode(manager unsafe.Pointer, inputMode unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_voice_manager_set_input_mode((*C.struct_IDiscordVoiceManager)(manager), *(*C.struct_DiscordInputMode)(inputMode), callbackData, (*[0]byte)(callback))
-		return nil
 	})
 }
 
@@ -964,20 +761,6 @@ func VoiceManagerSetLocalVolume(manager unsafe.Pointer, userID int64, volume uin
 }
 
 // Achievement manager wrappers
-func AchievementManagerSetUserAchievement(manager unsafe.Pointer, achievementID int64, percentComplete uint8, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_achievement_manager_set_user_achievement((*C.struct_IDiscordAchievementManager)(manager), C.DiscordSnowflake(achievementID), C.uint8_t(percentComplete), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
-func AchievementManagerFetchUserAchievements(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_achievement_manager_fetch_user_achievements((*C.struct_IDiscordAchievementManager)(manager), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
 func AchievementManagerCountUserAchievements(manager unsafe.Pointer, count unsafe.Pointer) {
 	RunOnDispatcherSync(func() any {
 		C.discord_achievement_manager_count_user_achievements((*C.struct_IDiscordAchievementManager)(manager), (*C.int32_t)(count))
@@ -1255,20 +1038,7 @@ func LobbyManagerGetLobbyGo(manager unsafe.Pointer, lobbyID int64) (id int64, ty
 	return
 }
 
-func LobbyManagerGetLobbyActivitySecret(manager unsafe.Pointer, lobbyID int64, secret unsafe.Pointer) int32 {
-	return RunOnDispatcherSync(func() int32 {
-		return int32(C.discord_lobby_manager_get_lobby_activity_secret((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), (*C.DiscordLobbySecret)(secret)))
-	})
-}
-
 // Image manager wrappers
-func ImageManagerFetch(manager unsafe.Pointer, handle unsafe.Pointer, refresh bool, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_image_manager_fetch((*C.struct_IDiscordImageManager)(manager), *(*C.struct_DiscordImageHandle)(handle), C.bool(refresh), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
 func ImageManagerGetDimensions(manager unsafe.Pointer, handle unsafe.Pointer, dimensions unsafe.Pointer) int32 {
 	return RunOnDispatcherSync(func() int32 {
 		return int32(C.discord_image_manager_get_dimensions((*C.struct_IDiscordImageManager)(manager), *(*C.struct_DiscordImageHandle)(handle), (*C.struct_DiscordImageDimensions)(dimensions)))
@@ -1282,13 +1052,6 @@ func ImageManagerGetData(manager unsafe.Pointer, handle unsafe.Pointer, data uns
 }
 
 // Relationship manager wrappers
-func RelationshipManagerFilter(manager unsafe.Pointer, filterData unsafe.Pointer, filter unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_relationship_manager_filter((*C.struct_IDiscordRelationshipManager)(manager), filterData, (*[0]byte)(filter))
-		return nil
-	})
-}
-
 func RelationshipManagerCount(manager unsafe.Pointer, count unsafe.Pointer) int32 {
 	return RunOnDispatcherSync(func() int32 {
 		return int32(C.discord_relationship_manager_count((*C.struct_IDiscordRelationshipManager)(manager), (*C.int32_t)(count)))
@@ -1304,14 +1067,6 @@ func RelationshipManagerGet(manager unsafe.Pointer, userID int64, relationship u
 func RelationshipManagerGetAt(manager unsafe.Pointer, index uint32, relationship unsafe.Pointer) int32 {
 	return RunOnDispatcherSync(func() int32 {
 		return int32(C.discord_relationship_manager_get_at((*C.struct_IDiscordRelationshipManager)(manager), C.uint32_t(index), (*C.struct_DiscordRelationship)(relationship)))
-	})
-}
-
-// Additional missing lobby manager wrappers
-func LobbyManagerConnectLobbyWithActivitySecret(manager unsafe.Pointer, activitySecret unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_connect_lobby_with_activity_secret((*C.struct_IDiscordLobbyManager)(manager), (*C.char)(activitySecret), callbackData, (*[0]byte)(callback))
-		return nil
 	})
 }
 
@@ -1377,23 +1132,9 @@ func LobbyManagerMemberMetadataCount(manager unsafe.Pointer, lobbyID int64, user
 	})
 }
 
-func LobbyManagerUpdateMember(manager unsafe.Pointer, lobbyID int64, userID int64, transaction unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_update_member((*C.struct_IDiscordLobbyManager)(manager), C.DiscordLobbyId(lobbyID), C.DiscordUserId(userID), (*C.struct_IDiscordLobbyMemberTransaction)(transaction), callbackData, (*[0]byte)(callback))
-		return nil
-	})
-}
-
 func LobbyManagerGetSearchQuery(manager unsafe.Pointer, query unsafe.Pointer) int32 {
 	return RunOnDispatcherSync(func() int32 {
 		return int32(C.discord_lobby_manager_get_search_query((*C.struct_IDiscordLobbyManager)(manager), (**C.struct_IDiscordLobbySearchQuery)(query)))
-	})
-}
-
-func LobbyManagerSearch(manager unsafe.Pointer, query unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_search((*C.struct_IDiscordLobbyManager)(manager), (*C.struct_IDiscordLobbySearchQuery)(query), callbackData, (*[0]byte)(callback))
-		return nil
 	})
 }
 
@@ -1408,4 +1149,920 @@ func LobbyManagerGetLobbyID(manager unsafe.Pointer, index int32, lobbyID unsafe.
 	return RunOnDispatcherSync(func() int32 {
 		return int32(C.discord_lobby_manager_get_lobby_id((*C.struct_IDiscordLobbyManager)(manager), C.int32_t(index), (*C.DiscordLobbyId)(lobbyID)))
 	})
+}
+
+// Local types for lobby operations (do not use core types here)
+type LobbyType int32
+
+const (
+	LobbyTypePrivate LobbyType = 1
+	LobbyTypePublic  LobbyType = 2
+)
+
+type LobbyData struct {
+	ID       int64
+	Type     LobbyType
+	OwnerID  int64
+	Secret   string
+	Capacity uint32
+	Locked   bool
+}
+
+type Lobby = LobbyData
+
+// ApplicationManagerValidateOrExitGo
+func ApplicationManagerValidateOrExitGo(manager unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_application_manager_validate_or_exit(
+		(*C.struct_IDiscordApplicationManager)(manager),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export ApplicationManagerValidateOrExitCallback
+func ApplicationManagerValidateOrExitCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// ApplicationManagerGetOAuth2TokenGo
+func ApplicationManagerGetOAuth2TokenGo(manager unsafe.Pointer, goCallback func(result int32, token unsafe.Pointer)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_application_manager_get_oauth2_token(
+		(*C.struct_IDiscordApplicationManager)(manager),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export ApplicationManagerGetOAuth2TokenCallback
+func ApplicationManagerGetOAuth2TokenCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult, token *C.DiscordOAuth2Token) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32, unsafe.Pointer))
+	if ok {
+		cb(int32(result), unsafe.Pointer(token))
+	}
+	handle.Delete()
+}
+
+// ApplicationManagerGetTicketGo
+func ApplicationManagerGetTicketGo(manager unsafe.Pointer, goCallback func(result int32, data string)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_application_manager_get_ticket(
+		(*C.struct_IDiscordApplicationManager)(manager),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export ApplicationManagerGetTicketCallback
+func ApplicationManagerGetTicketCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult, data *C.char) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32, string))
+	if ok {
+		cb(int32(result), C.GoString(data))
+	}
+	handle.Delete()
+}
+
+// UserManagerGetUserGo
+func UserManagerGetUserGo(manager unsafe.Pointer, userID int64, goCallback func(result int32, user unsafe.Pointer)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_user_manager_get_user(
+		(*C.struct_IDiscordUserManager)(manager),
+		C.DiscordUserId(userID),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export UserManagerGetUserCallback
+func UserManagerGetUserCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult, user *C.struct_DiscordUser) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32, unsafe.Pointer))
+	if ok {
+		cb(int32(result), unsafe.Pointer(user))
+	}
+	handle.Delete()
+}
+
+// ActivityManagerUpdateActivityGo
+func ActivityManagerUpdateActivityGo(manager unsafe.Pointer, activity unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_activity_manager_update_activity(
+		(*C.struct_IDiscordActivityManager)(manager),
+		(*C.struct_DiscordActivity)(activity),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export ActivityManagerUpdateActivityCallback
+func ActivityManagerUpdateActivityCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// ActivityManagerClearActivityGo
+func ActivityManagerClearActivityGo(manager unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_activity_manager_clear_activity(
+		(*C.struct_IDiscordActivityManager)(manager),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export ActivityManagerClearActivityCallback
+func ActivityManagerClearActivityCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// ActivityManagerSendRequestReplyGo
+func ActivityManagerSendRequestReplyGo(manager unsafe.Pointer, userID int64, reply int32, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_activity_manager_send_request_reply(
+		(*C.struct_IDiscordActivityManager)(manager),
+		C.DiscordUserId(userID),
+		C.enum_EDiscordActivityJoinRequestReply(reply),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export ActivityManagerSendRequestReplyCallback
+func ActivityManagerSendRequestReplyCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// ActivityManagerSendInviteGo
+func ActivityManagerSendInviteGo(manager unsafe.Pointer, userID int64, actionType int32, content *C.char, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_activity_manager_send_invite(
+		(*C.struct_IDiscordActivityManager)(manager),
+		C.DiscordUserId(userID),
+		C.enum_EDiscordActivityActionType(actionType),
+		content,
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export ActivityManagerSendInviteCallback
+func ActivityManagerSendInviteCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// ActivityManagerAcceptInviteGo
+func ActivityManagerAcceptInviteGo(manager unsafe.Pointer, userID int64, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_activity_manager_accept_invite(
+		(*C.struct_IDiscordActivityManager)(manager),
+		C.DiscordUserId(userID),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export ActivityManagerAcceptInviteCallback
+func ActivityManagerAcceptInviteCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// --- WRAPPERS FOR CORE PACKAGE COMPATIBILITY ---
+// These wrappers match the expected signatures from core/ and call the ...Go versions.
+
+// ActivityManager wrappers
+func ActivityManagerUpdateActivity(manager unsafe.Pointer, activity unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	ActivityManagerUpdateActivityGo(manager, activity, nil) // callback support can be added as needed
+}
+
+func ActivityManagerClearActivity(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	ActivityManagerClearActivityGo(manager, nil) // callback support can be added as needed
+}
+
+func ActivityManagerSendRequestReply(manager unsafe.Pointer, userID int64, reply int32, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	ActivityManagerSendRequestReplyGo(manager, userID, reply, nil) // callback support can be added as needed
+}
+
+func ActivityManagerSendInvite(manager unsafe.Pointer, userID int64, actionType int32, content *C.char, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	ActivityManagerSendInviteGo(manager, userID, actionType, content, nil) // callback support can be added as needed
+}
+
+func ActivityManagerAcceptInvite(manager unsafe.Pointer, userID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	ActivityManagerAcceptInviteGo(manager, userID, nil) // callback support can be added as needed
+}
+
+// ApplicationManager wrappers
+func ApplicationManagerValidateOrExit(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	ApplicationManagerValidateOrExitGo(manager, nil) // callback support can be added as needed
+}
+
+func ApplicationManagerGetOAuth2Token(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	ApplicationManagerGetOAuth2TokenGo(manager, nil) // callback support can be added as needed
+}
+
+func ApplicationManagerGetTicket(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	ApplicationManagerGetTicketGo(manager, nil) // callback support can be added as needed
+}
+
+// AchievementManager wrappers (stubs for now)
+func AchievementManagerSetUserAchievement(manager unsafe.Pointer, achievementID int64, percentComplete uint8, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	AchievementManagerSetUserAchievementGo(manager, achievementID, percentComplete, nil) // callback support can be added as needed
+}
+
+func AchievementManagerFetchUserAchievements(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	AchievementManagerFetchUserAchievementsGo(manager, nil) // callback support can be added as needed
+}
+
+// LobbyManager wrappers
+func LobbyManagerCreateLobby(manager unsafe.Pointer, transaction unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerCreateLobbyGo(manager, transaction, nil) // callback support can be added as needed
+}
+
+func LobbyManagerUpdateLobby(manager unsafe.Pointer, lobbyID int64, transaction unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerUpdateLobbyGo(manager, lobbyID, transaction, nil) // callback support can be added as needed
+}
+
+func LobbyManagerDeleteLobby(manager unsafe.Pointer, lobbyID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerDeleteLobbyGo(manager, lobbyID, nil) // callback support can be added as needed
+}
+
+func LobbyManagerConnectLobby(manager unsafe.Pointer, lobbyID int64, secret unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerConnectLobbyGo(manager, lobbyID, secret, nil) // callback support can be added as needed
+}
+
+func LobbyManagerDisconnectLobby(manager unsafe.Pointer, lobbyID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerDisconnectLobbyGo(manager, lobbyID, nil) // callback support can be added as needed
+}
+
+// ImageManager wrappers
+func ImageManagerFetch(manager unsafe.Pointer, handle unsafe.Pointer, refresh bool, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	ImageManagerFetchGo(manager, handle, refresh, nil) // callback support can be added as needed
+}
+
+// StoreManager wrappers
+func StoreManagerFetchSkus(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	StoreManagerFetchSkusGo(manager, nil) // callback support can be added as needed
+}
+
+func StoreManagerFetchEntitlements(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	StoreManagerFetchEntitlementsGo(manager, nil) // callback support can be added as needed
+}
+
+func StoreManagerStartPurchase(manager unsafe.Pointer, skuID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	StoreManagerStartPurchaseGo(manager, skuID, nil) // callback support can be added as needed
+}
+
+// RelationshipManager wrappers
+func RelationshipManagerFilter(manager unsafe.Pointer, filterData unsafe.Pointer, filter unsafe.Pointer) {
+	// TODO: Implement proper callback support
+}
+
+// LobbyManager additional wrappers
+func LobbyManagerSendLobbyMessage(manager unsafe.Pointer, lobbyID int64, data unsafe.Pointer, dataLength uint32, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerSendLobbyMessageGo(manager, lobbyID, data, dataLength, nil) // callback support can be added as needed
+}
+
+func LobbyManagerConnectVoice(manager unsafe.Pointer, lobbyID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerConnectVoiceGo(manager, lobbyID, nil) // callback support can be added as needed
+}
+
+func LobbyManagerDisconnectVoice(manager unsafe.Pointer, lobbyID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerDisconnectVoiceGo(manager, lobbyID, nil) // callback support can be added as needed
+}
+
+func LobbyManagerConnectLobbyWithActivitySecret(manager unsafe.Pointer, activitySecret unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerConnectLobbyWithActivitySecretGo(manager, activitySecret, nil) // callback support can be added as needed
+}
+
+func LobbyManagerUpdateMember(manager unsafe.Pointer, lobbyID int64, userID int64, transaction unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerUpdateMemberGo(manager, lobbyID, userID, transaction, nil) // callback support can be added as needed
+}
+
+// More wrappers for missing core symbols
+func LobbyManagerSearch(manager unsafe.Pointer, query unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	LobbyManagerSearchGo(manager, query, nil) // callback support can be added as needed
+}
+
+func OverlayManagerSetLocked(manager unsafe.Pointer, locked bool, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	OverlayManagerSetLockedGo(manager, locked, nil) // callback support can be added as needed
+}
+
+func OverlayManagerOpenActivityInvite(manager unsafe.Pointer, actionType int32, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	OverlayManagerOpenActivityInviteGo(manager, actionType, nil) // callback support can be added as needed
+}
+
+func OverlayManagerOpenGuildInvite(manager unsafe.Pointer, code *C.char, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	OverlayManagerOpenGuildInviteGo(manager, code, nil) // callback support can be added as needed
+}
+
+func OverlayManagerOpenVoiceSettings(manager unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	OverlayManagerOpenVoiceSettingsGo(manager, nil) // callback support can be added as needed
+}
+
+func UserManagerGetUser(manager unsafe.Pointer, userID int64, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	// TODO: Implement proper callback support
+}
+
+func VoiceManagerSetInputMode(manager unsafe.Pointer, inputMode unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
+	VoiceManagerSetInputModeGo(manager, inputMode, nil) // callback support can be added as needed
+}
+
+// --- BEGIN: Async Trampolines and Go-friendly Methods for Stubs ---
+
+// AchievementManagerSetUserAchievementGo
+func AchievementManagerSetUserAchievementGo(manager unsafe.Pointer, achievementID int64, percentComplete uint8, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_achievement_manager_set_user_achievement(
+		(*C.struct_IDiscordAchievementManager)(manager),
+		C.DiscordSnowflake(achievementID),
+		C.uint8_t(percentComplete),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export AchievementManagerSetUserAchievementCallback
+func AchievementManagerSetUserAchievementCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// AchievementManagerFetchUserAchievementsGo
+func AchievementManagerFetchUserAchievementsGo(manager unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_achievement_manager_fetch_user_achievements(
+		(*C.struct_IDiscordAchievementManager)(manager),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export AchievementManagerFetchUserAchievementsCallback
+func AchievementManagerFetchUserAchievementsCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerCreateLobbyGo
+func LobbyManagerCreateLobbyGo(manager unsafe.Pointer, transaction unsafe.Pointer, goCallback func(result int32, lobby unsafe.Pointer)) {
+	getLogger().Info("[Go] Registering LobbyManagerCreateLobbyGo callback", "manager", manager, "transaction", transaction, "goCallback_ptr", &goCallback)
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_create_lobby(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		(*C.struct_IDiscordLobbyTransaction)(transaction),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+	getLogger().Info("[Go] LobbyManagerCreateLobbyGo: C.discord_lobby_manager_create_lobby called", "handle", handle)
+}
+
+//export LobbyManagerCreateLobbyCallback
+func LobbyManagerCreateLobbyCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult, lobby *C.struct_DiscordLobby) {
+	getLogger().Info("[Go] LobbyManagerCreateLobbyCallback invoked", "callbackData", callbackData, "result", int32(result), "lobby_ptr", lobby)
+	if callbackData == nil {
+		getLogger().Warn("[Go] LobbyManagerCreateLobbyCallback: callbackData is nil")
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32, unsafe.Pointer))
+	if ok {
+		getLogger().Info("[Go] LobbyManagerCreateLobbyCallback: calling Go callback", "callbackData", callbackData)
+		cb(int32(result), unsafe.Pointer(lobby))
+	} else {
+		getLogger().Error("[Go] LobbyManagerCreateLobbyCallback: handle.Value() is not func(int32, unsafe.Pointer)", "callbackData", callbackData)
+	}
+	handle.Delete()
+	getLogger().Info("[Go] LobbyManagerCreateLobbyCallback: handle deleted", "callbackData", callbackData)
+}
+
+// LobbyManagerUpdateLobbyGo
+func LobbyManagerUpdateLobbyGo(manager unsafe.Pointer, lobbyID int64, transaction unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_update_lobby(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		C.DiscordLobbyId(lobbyID),
+		(*C.struct_IDiscordLobbyTransaction)(transaction),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerUpdateLobbyCallback
+func LobbyManagerUpdateLobbyCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerDeleteLobbyGo
+func LobbyManagerDeleteLobbyGo(manager unsafe.Pointer, lobbyID int64, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_delete_lobby(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		C.DiscordLobbyId(lobbyID),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerDeleteLobbyCallback
+func LobbyManagerDeleteLobbyCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerConnectLobbyGo
+func LobbyManagerConnectLobbyGo(manager unsafe.Pointer, lobbyID int64, secret unsafe.Pointer, goCallback func(result int32, lobby unsafe.Pointer)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_connect_lobby(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		C.DiscordLobbyId(lobbyID),
+		(*C.char)(secret),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerConnectLobbyCallback
+func LobbyManagerConnectLobbyCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult, lobby *C.struct_DiscordLobby) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32, unsafe.Pointer))
+	if ok {
+		cb(int32(result), unsafe.Pointer(lobby))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerDisconnectLobbyGo
+func LobbyManagerDisconnectLobbyGo(manager unsafe.Pointer, lobbyID int64, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_disconnect_lobby(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		C.DiscordLobbyId(lobbyID),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerDisconnectLobbyCallback
+func LobbyManagerDisconnectLobbyCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// ImageManagerFetchGo
+func ImageManagerFetchGo(manager unsafe.Pointer, handle unsafe.Pointer, refresh bool, goCallback func(result int32, handleResult unsafe.Pointer)) {
+	handleGo := runtimecgo.NewHandle(goCallback)
+	C.discord_image_manager_fetch(
+		(*C.struct_IDiscordImageManager)(manager),
+		*(*C.struct_DiscordImageHandle)(handle),
+		C.bool(refresh),
+		unsafe.Pointer(handleGo),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export ImageManagerFetchCallback
+func ImageManagerFetchCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult, handleResult C.struct_DiscordImageHandle) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32, unsafe.Pointer))
+	if ok {
+		cb(int32(result), unsafe.Pointer(&handleResult))
+	}
+	handle.Delete()
+}
+
+// StoreManagerFetchSkusGo
+func StoreManagerFetchSkusGo(manager unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_store_manager_fetch_skus(
+		(*C.struct_IDiscordStoreManager)(manager),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export StoreManagerFetchSkusCallback
+func StoreManagerFetchSkusCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// StoreManagerFetchEntitlementsGo
+func StoreManagerFetchEntitlementsGo(manager unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_store_manager_fetch_entitlements(
+		(*C.struct_IDiscordStoreManager)(manager),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export StoreManagerFetchEntitlementsCallback
+func StoreManagerFetchEntitlementsCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// StoreManagerStartPurchaseGo
+func StoreManagerStartPurchaseGo(manager unsafe.Pointer, skuID int64, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_store_manager_start_purchase(
+		(*C.struct_IDiscordStoreManager)(manager),
+		C.DiscordSnowflake(skuID),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export StoreManagerStartPurchaseCallback
+func StoreManagerStartPurchaseCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerSendLobbyMessageGo
+func LobbyManagerSendLobbyMessageGo(manager unsafe.Pointer, lobbyID int64, data unsafe.Pointer, dataLength uint32, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_send_lobby_message(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		C.DiscordLobbyId(lobbyID),
+		(*C.uint8_t)(data),
+		C.uint32_t(dataLength),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerSendLobbyMessageCallback
+func LobbyManagerSendLobbyMessageCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerConnectVoiceGo
+func LobbyManagerConnectVoiceGo(manager unsafe.Pointer, lobbyID int64, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_connect_voice(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		C.DiscordLobbyId(lobbyID),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerConnectVoiceCallback
+func LobbyManagerConnectVoiceCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerDisconnectVoiceGo
+func LobbyManagerDisconnectVoiceGo(manager unsafe.Pointer, lobbyID int64, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_disconnect_voice(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		C.DiscordLobbyId(lobbyID),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerDisconnectVoiceCallback
+func LobbyManagerDisconnectVoiceCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerConnectLobbyWithActivitySecretGo
+func LobbyManagerConnectLobbyWithActivitySecretGo(manager unsafe.Pointer, activitySecret unsafe.Pointer, goCallback func(result int32, lobby unsafe.Pointer)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_connect_lobby_with_activity_secret(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		(*C.char)(activitySecret),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerConnectLobbyWithActivitySecretCallback
+func LobbyManagerConnectLobbyWithActivitySecretCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult, lobby *C.struct_DiscordLobby) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32, unsafe.Pointer))
+	if ok {
+		cb(int32(result), unsafe.Pointer(lobby))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerUpdateMemberGo
+func LobbyManagerUpdateMemberGo(manager unsafe.Pointer, lobbyID int64, userID int64, transaction unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_update_member(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		C.DiscordLobbyId(lobbyID),
+		C.DiscordUserId(userID),
+		(*C.struct_IDiscordLobbyMemberTransaction)(transaction),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerUpdateMemberCallback
+func LobbyManagerUpdateMemberCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// LobbyManagerSearchGo
+func LobbyManagerSearchGo(manager unsafe.Pointer, query unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_lobby_manager_search(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		(*C.struct_IDiscordLobbySearchQuery)(query),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export LobbyManagerSearchCallback
+func LobbyManagerSearchCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// OverlayManagerSetLockedGo
+func OverlayManagerSetLockedGo(manager unsafe.Pointer, locked bool, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_overlay_manager_set_locked(
+		(*C.struct_IDiscordOverlayManager)(manager),
+		C.bool(locked),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export OverlayManagerSetLockedCallback
+func OverlayManagerSetLockedCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// OverlayManagerOpenActivityInviteGo
+func OverlayManagerOpenActivityInviteGo(manager unsafe.Pointer, actionType int32, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_overlay_manager_open_activity_invite(
+		(*C.struct_IDiscordOverlayManager)(manager),
+		C.enum_EDiscordActivityActionType(actionType),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export OverlayManagerOpenActivityInviteCallback
+func OverlayManagerOpenActivityInviteCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// OverlayManagerOpenGuildInviteGo
+func OverlayManagerOpenGuildInviteGo(manager unsafe.Pointer, code *C.char, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_overlay_manager_open_guild_invite(
+		(*C.struct_IDiscordOverlayManager)(manager),
+		code,
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export OverlayManagerOpenGuildInviteCallback
+func OverlayManagerOpenGuildInviteCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// OverlayManagerOpenVoiceSettingsGo
+func OverlayManagerOpenVoiceSettingsGo(manager unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_overlay_manager_open_voice_settings(
+		(*C.struct_IDiscordOverlayManager)(manager),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export OverlayManagerOpenVoiceSettingsCallback
+func OverlayManagerOpenVoiceSettingsCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
+}
+
+// VoiceManagerSetInputModeGo
+func VoiceManagerSetInputModeGo(manager unsafe.Pointer, inputMode unsafe.Pointer, goCallback func(result int32)) {
+	handle := runtimecgo.NewHandle(goCallback)
+	C.discord_voice_manager_set_input_mode(
+		(*C.struct_IDiscordVoiceManager)(manager),
+		*(*C.struct_DiscordInputMode)(inputMode),
+		unsafe.Pointer(handle),
+		nil, // callback pointer is handled by Go trampoline
+	)
+}
+
+//export VoiceManagerSetInputModeCallback
+func VoiceManagerSetInputModeCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult) {
+	if callbackData == nil {
+		return
+	}
+	handle := runtimecgo.Handle(callbackData)
+	cb, ok := handle.Value().(func(int32))
+	if ok {
+		cb(int32(result))
+	}
+	handle.Delete()
 }

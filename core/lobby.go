@@ -3,9 +3,8 @@ package core
 import (
 	"unsafe"
 
-	runtimecgo "runtime/cgo"
-
 	dcgo "github.com/andresperezl/discordctl/discordcgo"
+	discordlog "github.com/andresperezl/discordctl/discordlog"
 )
 
 // LobbyManager provides access to lobby-related functionality
@@ -15,8 +14,10 @@ type LobbyManager struct {
 
 // CreateLobby creates a new lobby
 func (l *LobbyManager) CreateLobby(transaction *LobbyTransaction, callback func(result Result, lobby *Lobby)) {
+	discordlog.GetLogger().Info("LobbyManager.CreateLobby called", "transaction", transaction)
 	if l.manager == nil {
 		if callback != nil {
+			discordlog.GetLogger().Warn("LobbyManager.CreateLobby: manager is nil")
 			callback(ResultInternalError, nil)
 		}
 		return
@@ -28,18 +29,13 @@ func (l *LobbyManager) CreateLobby(transaction *LobbyTransaction, callback func(
 	}
 
 	var callbackData unsafe.Pointer
-	var handle runtimecgo.Handle
 	if callback != nil {
-		handle = runtimecgo.NewHandle(callback)
-		callbackData = unsafe.Pointer(&handle)
+		callbackData = unsafe.Pointer(&callback)
 	}
 	dcgo.RunOnDispatcherSync(func() any {
 		dcgo.LobbyManagerCreateLobby(l.manager, cTransaction, callbackData, nil)
 		return nil
 	})
-	if callback != nil {
-		handle.Delete()
-	}
 }
 
 // UpdateLobby updates a lobby
@@ -126,7 +122,9 @@ func (l *LobbyManager) DisconnectLobby(lobbyID int64, callback func(result Resul
 
 // GetLobby gets a lobby by ID
 func (l *LobbyManager) GetLobby(lobbyID int64) (*Lobby, Result) {
+	discordlog.GetLogger().Info("LobbyManager.GetLobby called", "lobbyID", lobbyID)
 	if l.manager == nil {
+		discordlog.GetLogger().Warn("LobbyManager.GetLobby: manager is nil")
 		return nil, ResultInternalError
 	}
 

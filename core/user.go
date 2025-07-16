@@ -4,6 +4,7 @@ import (
 	"unsafe"
 
 	dcgo "github.com/andresperezl/discordctl/discordcgo"
+	discordlog "github.com/andresperezl/discordctl/discordlog"
 )
 
 // UserManager provides access to user-related functionality
@@ -13,7 +14,9 @@ type UserManager struct {
 
 // GetCurrentUser gets the current user
 func (u *UserManager) GetCurrentUser() (*User, Result) {
+	discordlog.GetLogger().Info("UserManager.GetCurrentUser called")
 	if u.ptr == nil {
+		discordlog.GetLogger().Warn("UserManager.GetCurrentUser: manager is nil")
 		return nil, ResultInternalError
 	}
 
@@ -43,9 +46,11 @@ func (u *UserManager) GetCurrentUser() (*User, Result) {
 	})
 
 	if result != int32(ResultOk) {
+		discordlog.GetLogger().Error("UserManager.GetCurrentUser failed", "result", result)
 		return nil, Result(result)
 	}
 
+	discordlog.GetLogger().Info("UserManager.GetCurrentUser succeeded", "user_id", cUser.id)
 	return userFromStruct(&cUser), ResultOk
 }
 

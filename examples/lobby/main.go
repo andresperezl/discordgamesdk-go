@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"log/slog"
+
 	discord "github.com/andresperezl/discordctl"
 	core "github.com/andresperezl/discordctl/core"
 )
@@ -26,47 +28,84 @@ func getClientID() int64 {
 }
 
 func main() {
+	h := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	slog.SetDefault(h)
+
 	clientID := getClientID()
-	fmt.Printf("Starting Discord SDK with client ID: %d\n", clientID)
+	slog.Info("Starting Discord SDK", "clientID", clientID)
 
 	config := discord.DefaultClientConfig(clientID)
 	client, err := discord.NewClient(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to initialize Discord SDK: %v\n", err)
+		slog.Error("Failed to initialize Discord SDK", "error", err)
 		os.Exit(1)
 	}
 	defer client.Close()
 
-	fmt.Println("Discord SDK initialized successfully!")
+	slog.Info("Discord SDK initialized successfully!")
 
 	// Create a public lobby
 	lobbyManager := client.Lobby()
 	createTxn, err := lobbyManager.GetLobbyCreateTransaction()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get lobby create transaction: %v\n", err)
+		slog.Error("Failed to get lobby create transaction", "error", err)
 		return
 	}
-	createTxn.SetType(core.LobbyTypePublic)
-	createTxn.SetCapacity(4)
+	slog.Info("Got lobby create transaction", "txn", createTxn)
 
-	lobbyChan, errChan := lobbyManager.CreateLobby(createTxn)
+	// Set up timeout from env
+	timeoutSecs := 5
+	if val := os.Getenv("LOBBY_TIMEOUT_SECS"); val != "" {
+		if n, err := strconv.Atoi(val); err == nil && n > 0 {
+			timeoutSecs = n
+		}
+	}
+	timeout := time.Duration(timeoutSecs) * time.Second
+	slog.Info("Lobby creation timeout set", "timeout", timeout)
+
+	lobbyCh, errCh := lobbyManager.CreateLobby(createTxn)
+
+	slog.Info("Called CreateLobby, waiting for result", "timeout", timeout)
+	start := time.Now()
+	var lobby *core.Lobby
+	var lobbyErr error
+	callbackDone := make(chan struct{})
+	go func() {
+		slog.Info("[goroutine] Waiting for lobby creation callback...")
+		lobby = <-lobbyCh
+		slog.Info("[goroutine] Received lobby from lobbyCh", "lobby", lobby)
+		lobbyErr = <-errCh
+		slog.Info("[goroutine] Received error from errCh", "error", lobbyErr)
+		close(callbackDone)
+		if lobbyErr != nil {
+			slog.Error("[goroutine] Lobby creation error", "error", lobbyErr)
+		} else if lobby != nil {
+			slog.Info("[goroutine] Lobby created", "lobbyID", lobby.ID)
+		} else {
+			slog.Warn("[goroutine] Lobby is nil after creation")
+		}
+	}()
 
 	select {
-	case lobby := <-lobbyChan:
-		if lobby != nil {
-			fmt.Printf("Lobby created! ID: %d, Secret: %s\n", lobby.ID, lobby.Secret)
-		} else {
-			fmt.Println("Lobby creation returned nil lobby.")
+	case <-callbackDone:
+		elapsed := time.Since(start)
+		slog.Info("Lobby creation callback completed", "elapsed", elapsed, "lobby", lobby, "error", lobbyErr)
+		if lobbyErr != nil {
+			slog.Error("Lobby creation failed", "error", lobbyErr)
+			fmt.Println("Lobby creation failed:", lobbyErr)
+			return
 		}
-	case err := <-errChan:
-		fmt.Fprintf(os.Stderr, "Failed to create lobby: %v\n", err)
-		return
-	case <-time.After(5 * time.Second):
-		fmt.Fprintln(os.Stderr, "Timed out waiting for lobby creation.")
-		return
+		if lobby == nil {
+			slog.Error("Lobby is nil after creation")
+			fmt.Println("Lobby is nil after creation")
+			return
+		}
+		fmt.Println("Lobby created! ID:", lobby.ID)
+	case <-time.After(timeout):
+		elapsed := time.Since(start)
+		slog.Error("Timed out waiting for lobby creation", "timeout", timeout, "elapsed", elapsed)
+		fmt.Println("Timed out waiting for lobby creation.")
 	}
-
-	fmt.Println("Waiting 5 seconds before exit...")
-	time.Sleep(5 * time.Second)
-	fmt.Println("Exiting.")
+	// Final log
+	slog.Info("Exiting main")
 }

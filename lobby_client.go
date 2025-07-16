@@ -398,6 +398,18 @@ func (c *LobbyClient) UpdateLobbyWithContext(ctx context.Context, lobbyID int64,
 	}
 }
 
+// GetLobbyCreateTransaction returns a new lobby create transaction
+func (c *LobbyClient) GetLobbyCreateTransaction() (*core.LobbyTransaction, error) {
+	if c.manager == nil {
+		return nil, fmt.Errorf("lobby manager not available")
+	}
+	transaction, result := c.manager.GetLobbyCreateTransaction()
+	if result != core.ResultOk {
+		return nil, fmt.Errorf("failed to get lobby create transaction: %v", result)
+	}
+	return transaction, nil
+}
+
 // NOTE: The Discord Game SDK does not provide APIs for lobby metadata value by index, lobby message history, or direct search result access.
 // Methods such as GetLobbyMetadataValueByIndex, GetLobbyMemberMetadataValueByIndex, GetLobbyMessageCount, GetLobbyMessageUserId, GetLobbyMessageData,
 // Search, SearchWithFilter, GetSearchResultCount, and GetSearchResult have been removed because they cannot be implemented with the current SDK.

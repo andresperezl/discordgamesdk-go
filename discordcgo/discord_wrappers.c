@@ -1,4 +1,5 @@
 #include "discord_game_sdk.h"
+#include <stdio.h>
 
 // Core wrapper functions
 enum EDiscordResult discord_core_create(DiscordVersion version, struct DiscordCreateParams* params, struct IDiscordCore** result) {
@@ -139,7 +140,11 @@ enum EDiscordResult discord_lobby_manager_get_lobby_create_transaction(struct ID
 }
 
 void discord_lobby_manager_create_lobby(struct IDiscordLobbyManager* manager, struct IDiscordLobbyTransaction* transaction, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result, struct DiscordLobby* lobby)) {
+    printf("[C] discord_lobby_manager_create_lobby called: manager=%p, transaction=%p, callback_data=%p\n", manager, transaction, callback_data);
+    fflush(stdout);
     manager->create_lobby(manager, transaction, callback_data, callback);
+    printf("[C] discord_lobby_manager_create_lobby: manager->create_lobby invoked\n");
+    fflush(stdout);
 }
 
 void discord_lobby_manager_connect_lobby(struct IDiscordLobbyManager* manager, DiscordLobbyId lobby_id, DiscordLobbySecret secret, void* callback_data, void (*callback)(void* callback_data, enum EDiscordResult result, struct DiscordLobby* lobby)) {
@@ -607,3 +612,20 @@ void discord_lobby_manager_lobby_count(struct IDiscordLobbyManager* manager, int
 enum EDiscordResult discord_lobby_manager_get_lobby_id(struct IDiscordLobbyManager* manager, int32_t index, DiscordLobbyId* lobby_id) {
     return manager->get_lobby_id(manager, index, lobby_id);
 } 
+
+// Field accessors for DiscordSku
+int64_t get_discord_sku_id(struct DiscordSku* sku) { return sku->id; }
+int32_t get_discord_sku_type(struct DiscordSku* sku) { return sku->type; }
+void get_discord_sku_name(struct DiscordSku* sku, char* buf, int bufsize) { strncpy(buf, sku->name, bufsize); buf[bufsize-1] = '\0'; }
+uint32_t get_discord_sku_price_amount(struct DiscordSku* sku) { return sku->price.amount; }
+void get_discord_sku_price_currency(struct DiscordSku* sku, char* buf, int bufsize) { strncpy(buf, sku->price.currency, bufsize); buf[bufsize-1] = '\0'; }
+
+// Field accessors for DiscordEntitlement
+int64_t get_discord_entitlement_id(struct DiscordEntitlement* ent) { return ent->id; }
+int32_t get_discord_entitlement_type(struct DiscordEntitlement* ent) { return ent->type; }
+int64_t get_discord_entitlement_sku_id(struct DiscordEntitlement* ent) { return ent->sku_id; }
+
+// Field accessors for DiscordFileStat
+void get_discord_file_stat_filename(struct DiscordFileStat* stat, char* buf, int bufsize) { strncpy(buf, stat->filename, bufsize); buf[bufsize-1] = '\0'; }
+uint64_t get_discord_file_stat_size(struct DiscordFileStat* stat) { return stat->size; }
+uint64_t get_discord_file_stat_last_modified(struct DiscordFileStat* stat) { return stat->last_modified; } 

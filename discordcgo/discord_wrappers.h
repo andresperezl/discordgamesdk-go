@@ -184,4 +184,18 @@ void discord_relationship_manager_filter(struct IDiscordRelationshipManager* man
 enum EDiscordResult discord_relationship_manager_count(struct IDiscordRelationshipManager* manager, int32_t* count);
 enum EDiscordResult discord_relationship_manager_get(struct IDiscordRelationshipManager* manager, DiscordUserId user_id, struct DiscordRelationship* relationship);
 enum EDiscordResult discord_relationship_manager_get_at(struct IDiscordRelationshipManager* manager, uint32_t index, struct DiscordRelationship* relationship);
+// Field accessors for DiscordSku
+int64_t get_discord_sku_id(struct DiscordSku* sku);
+int32_t get_discord_sku_type(struct DiscordSku* sku);
+void get_discord_sku_name(struct DiscordSku* sku, char* buf, int bufsize);
+uint32_t get_discord_sku_price_amount(struct DiscordSku* sku);
+void get_discord_sku_price_currency(struct DiscordSku* sku, char* buf, int bufsize);
+// Field accessors for DiscordEntitlement
+int64_t get_discord_entitlement_id(struct DiscordEntitlement* ent);
+int32_t get_discord_entitlement_type(struct DiscordEntitlement* ent);
+int64_t get_discord_entitlement_sku_id(struct DiscordEntitlement* ent);
+// Field accessors for DiscordFileStat
+void get_discord_file_stat_filename(struct DiscordFileStat* stat, char* buf, int bufsize);
+uint64_t get_discord_file_stat_size(struct DiscordFileStat* stat);
+uint64_t get_discord_file_stat_last_modified(struct DiscordFileStat* stat);
 #endif 

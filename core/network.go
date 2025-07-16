@@ -4,6 +4,7 @@ import (
 	"unsafe"
 
 	dcgo "github.com/andresperezl/discordctl/discordcgo"
+	discordlog "github.com/andresperezl/discordctl/discordlog"
 )
 
 // NetworkManager provides access to network-related functionality
@@ -13,7 +14,9 @@ type NetworkManager struct {
 
 // GetPeerID gets the local peer ID
 func (n *NetworkManager) GetPeerID() uint64 {
+	discordlog.GetLogger().Info("NetworkManager.GetPeerID called")
 	if n.manager == nil {
+		discordlog.GetLogger().Warn("NetworkManager.GetPeerID: manager is nil")
 		return 0
 	}
 
@@ -38,7 +41,9 @@ func (n *NetworkManager) Flush() Result {
 
 // OpenPeer opens a connection to a remote peer
 func (n *NetworkManager) OpenPeer(peerID uint64, routeData string) Result {
+	discordlog.GetLogger().Info("NetworkManager.OpenPeer called", "peerID", peerID, "routeData", routeData)
 	if n.manager == nil {
+		discordlog.GetLogger().Warn("NetworkManager.OpenPeer: manager is nil")
 		return ResultInternalError
 	}
 	res := dcgo.RunOnDispatcherSync(func() int32 {

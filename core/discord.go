@@ -7,6 +7,7 @@ import (
 	"unsafe"
 
 	dcgo "github.com/andresperezl/discordctl/discordcgo"
+	discordlog "github.com/andresperezl/discordctl/discordlog"
 )
 
 // StoreManager provides access to store-related functionality
@@ -236,6 +237,7 @@ type Core struct {
 // Start begins a background goroutine that continuously calls RunCallbacks.
 // This ensures the SDK processes all events and state changes.
 func (c *Core) Start() {
+	discordlog.GetLogger().Info("Core.Start called")
 	if c.callbackStop != nil {
 		return // Already started
 	}
@@ -246,18 +248,18 @@ func (c *Core) Start() {
 		for {
 			select {
 			case <-c.callbackStop:
+				discordlog.GetLogger().Info("Core.Start: callbackStop received, stopping goroutine")
 				return
 			default:
 				result := c.RunCallbacks()
 				if result == ResultOk {
-					// Mark as initialized after first successful callback run
 					c.initMutex.Lock()
 					if !c.initialized {
+						discordlog.GetLogger().Info("Core.Start: SDK initialized")
 						c.initialized = true
 					}
 					c.initMutex.Unlock()
 				}
-				// 50ms is a good balance for responsiveness and CPU usage
 				time.Sleep(50 * time.Millisecond)
 			}
 		}
@@ -266,6 +268,7 @@ func (c *Core) Start() {
 
 // Shutdown stops the callback goroutine and cleans up resources.
 func (c *Core) Shutdown() {
+	discordlog.GetLogger().Info("Core.Shutdown called")
 	if c.callbackStop != nil {
 		close(c.callbackStop)
 		<-c.callbackDone
@@ -278,16 +281,19 @@ func (c *Core) Shutdown() {
 // WaitForInitialization blocks until the SDK is fully initialized
 // Returns true if initialized within timeout, false otherwise
 func (c *Core) WaitForInitialization(timeout time.Duration) bool {
+	discordlog.GetLogger().Info("Core.WaitForInitialization called", "timeout", timeout)
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		c.initMutex.RLock()
 		if c.initialized {
 			c.initMutex.RUnlock()
+			discordlog.GetLogger().Info("Core.WaitForInitialization: initialized")
 			return true
 		}
 		c.initMutex.RUnlock()
 		time.Sleep(50 * time.Millisecond)
 	}
+	discordlog.GetLogger().Warn("Core.WaitForInitialization: timeout")
 	return false
 }
 
@@ -342,13 +348,16 @@ func (c *Core) GetCallbackResult(callbackID string) (CallbackResult, bool) {
 
 // WaitForCallbackResult waits for a specific callback result
 func (c *Core) WaitForCallbackResult(callbackID string, timeout time.Duration) (CallbackResult, bool) {
+	discordlog.GetLogger().Info("Core.WaitForCallbackResult called", "callbackID", callbackID, "timeout", timeout)
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		if result, found := c.GetCallbackResult(callbackID); found {
+			discordlog.GetLogger().Info("Core.WaitForCallbackResult: found result", "callbackID", callbackID)
 			return result, true
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
+	discordlog.GetLogger().Warn("Core.WaitForCallbackResult: timeout", "callbackID", callbackID)
 	return CallbackResult{}, false
 }
 
@@ -362,18 +371,21 @@ func (c *Core) GenerateCallbackID() string {
 
 // Create creates a new Discord SDK instance
 func Create(clientID int64, flags CreateFlags, events *CoreEvents) (*Core, Result) {
-	// Use the helper function from discordcgo package
+	discordlog.GetLogger().Info("Core.Create called", "clientID", clientID, "flags", flags)
 	core, result := dcgo.CoreCreateHelper(clientID, uint64(flags))
 
 	if result != 0 {
+		discordlog.GetLogger().Error("Core.Create failed", "result", result)
 		return nil, Result(result)
 	}
+	discordlog.GetLogger().Info("Core.Create succeeded")
 
 	return &Core{ptr: core}, ResultOk
 }
 
 // Destroy destroys the Discord SDK instance
 func (c *Core) Destroy() {
+	discordlog.GetLogger().Info("Core.Destroy called")
 	if c.ptr != nil {
 		dcgo.CoreDestroy(c.ptr)
 		c.ptr = nil
@@ -382,7 +394,9 @@ func (c *Core) Destroy() {
 
 // RunCallbacks runs the Discord SDK callbacks
 func (c *Core) RunCallbacks() Result {
+	discordlog.GetLogger().Info("Core.RunCallbacks called")
 	if c.ptr == nil {
+		discordlog.GetLogger().Error("Core.RunCallbacks: ptr is nil")
 		return ResultInternalError
 	}
 	return Result(dcgo.CoreRunCallbacks(c.ptr))
