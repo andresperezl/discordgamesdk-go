@@ -3,7 +3,7 @@ package discord
 import (
 	"unsafe"
 
-	"github.com/andresperezl/discordctl/core"
+	"github.com/andresperezl/discordgamesdk-go/core"
 )
 
 type ImageClient struct {

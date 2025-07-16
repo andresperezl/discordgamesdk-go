@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	core "github.com/andresperezl/discordctl/core"
+	core "github.com/andresperezl/discordgamesdk-go/core"
 )
 
 // UserClient provides Go-like interfaces for user management

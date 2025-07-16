@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	core "github.com/andresperezl/discordctl/core"
+	core "github.com/andresperezl/discordgamesdk-go/core"
 )
 
 // ExampleLobbyClient_CreateLobbyWithContext demonstrates how to use CreateLobbyWithContext with a timeout.

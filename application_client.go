@@ -3,7 +3,7 @@ package discord
 import (
 	"fmt"
 
-	core "github.com/andresperezl/discordctl/core"
+	core "github.com/andresperezl/discordgamesdk-go/core"
 )
 
 // ApplicationClient provides Go-like interfaces for application management

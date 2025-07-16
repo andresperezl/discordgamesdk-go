@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	discord "github.com/andresperezl/discordctl"
+	discord "github.com/andresperezl/discordgamesdk-go"
 )
 
 func getClientID() int64 {

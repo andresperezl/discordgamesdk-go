@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	core "github.com/andresperezl/discordctl/core"
+	core "github.com/andresperezl/discordgamesdk-go/core"
 )
 
 // Client represents a Discord client with Go-like interfaces

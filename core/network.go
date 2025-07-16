@@ -3,8 +3,8 @@ package core
 import (
 	"unsafe"
 
-	dcgo "github.com/andresperezl/discordctl/discordcgo"
-	discordlog "github.com/andresperezl/discordctl/discordlog"
+	dcgo "github.com/andresperezl/discordgamesdk-go/discordcgo"
+	discordlog "github.com/andresperezl/discordgamesdk-go/discordlog"
 )
 
 // NetworkManager provides access to network-related functionality

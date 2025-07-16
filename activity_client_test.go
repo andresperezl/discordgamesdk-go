@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	core "github.com/andresperezl/discordctl/core"
+	core "github.com/andresperezl/discordgamesdk-go/core"
 )
 
 // ExampleActivityClient_SetActivityWithContext demonstrates how to use SetActivityWithContext with a timeout.

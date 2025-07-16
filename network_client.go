@@ -3,7 +3,7 @@ package discord
 import (
 	"fmt"
 
-	core "github.com/andresperezl/discordctl/core"
+	core "github.com/andresperezl/discordgamesdk-go/core"
 )
 
 // NOTE: The Discord Game SDK does not provide APIs to query open peers, channel counts, or message counts.

@@ -39,7 +39,7 @@ import (
 	"sync"
 	"unsafe"
 
-	discordlog "github.com/andresperezl/discordctl/discordlog"
+	discordlog "github.com/andresperezl/discordgamesdk-go/discordlog"
 )
 
 var (

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	core "github.com/andresperezl/discordctl/core"
+	core "github.com/andresperezl/discordgamesdk-go/core"
 )
 
 // StoreClient provides Go-like interfaces for store management

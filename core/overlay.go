@@ -3,7 +3,7 @@ package core
 import (
 	"unsafe"
 
-	dcgo "github.com/andresperezl/discordctl/discordcgo"
+	dcgo "github.com/andresperezl/discordgamesdk-go/discordcgo"
 )
 
 // OverlayManager provides access to overlay-related functionality

@@ -4,8 +4,8 @@ import (
 	"time"
 	"unsafe"
 
-	dcgo "github.com/andresperezl/discordctl/discordcgo"
-	discordlog "github.com/andresperezl/discordctl/discordlog"
+	dcgo "github.com/andresperezl/discordgamesdk-go/discordcgo"
+	discordlog "github.com/andresperezl/discordgamesdk-go/discordlog"
 )
 
 // ActivityManager provides access to activity-related functionality

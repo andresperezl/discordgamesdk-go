@@ -3,7 +3,7 @@ package discord
 import (
 	"fmt"
 
-	core "github.com/andresperezl/discordctl/core"
+	core "github.com/andresperezl/discordgamesdk-go/core"
 )
 
 // VoiceClient provides Go-like interfaces for voice management
