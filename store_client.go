@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"context"
 	"fmt"
 	"unsafe"
 
@@ -178,4 +179,82 @@ func (sc *StoreClient) StartPurchaseAsync(skuID int64, callbackData, callback un
 		return
 	}
 	sc.manager.StartPurchase(skuID, callbackData, callback)
+}
+
+// FetchSkusWithContext fetches SKUs asynchronously, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+//	defer cancel()
+//	skus, err := client.Store().FetchSkusWithContext(ctx)
+//	if err != nil {
+//	    log.Fatalf("failed to fetch SKUs: %v", err)
+//	}
+//	fmt.Printf("Fetched %d SKUs\n", len(skus))
+//
+// Returns the SKUs or error if the context is cancelled, deadline exceeded, or the fetch fails.
+func (sc *StoreClient) FetchSkusWithContext(ctx context.Context) ([]core.Sku, error) {
+	if sc.manager == nil {
+		return nil, fmt.Errorf("store manager not available")
+	}
+	skuChan := make(chan []core.Sku, 1)
+	errChan := make(chan error, 1)
+	sc.manager.FetchSkus(unsafe.Pointer(&skuChan), unsafe.Pointer(&errChan)) // Placeholder: actual async callback wiring needed
+	// For now, fallback to synchronous fetch with context support
+	go func() {
+		skus, err := sc.FetchSkus()
+		if err != nil {
+			errChan <- err
+		} else {
+			skuChan <- skus
+		}
+	}()
+	select {
+	case skus := <-skuChan:
+		return skus, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// FetchEntitlementsWithContext fetches entitlements asynchronously, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+//	defer cancel()
+//	ents, err := client.Store().FetchEntitlementsWithContext(ctx)
+//	if err != nil {
+//	    log.Fatalf("failed to fetch entitlements: %v", err)
+//	}
+//	fmt.Printf("Fetched %d entitlements\n", len(ents))
+//
+// Returns the entitlements or error if the context is cancelled, deadline exceeded, or the fetch fails.
+func (sc *StoreClient) FetchEntitlementsWithContext(ctx context.Context) ([]core.Entitlement, error) {
+	if sc.manager == nil {
+		return nil, fmt.Errorf("store manager not available")
+	}
+	entChan := make(chan []core.Entitlement, 1)
+	errChan := make(chan error, 1)
+	sc.manager.FetchEntitlements(unsafe.Pointer(&entChan), unsafe.Pointer(&errChan)) // Placeholder: actual async callback wiring needed
+	// For now, fallback to synchronous fetch with context support
+	go func() {
+		ents, err := sc.FetchEntitlements()
+		if err != nil {
+			errChan <- err
+		} else {
+			entChan <- ents
+		}
+	}()
+	select {
+	case ents := <-entChan:
+		return ents, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
