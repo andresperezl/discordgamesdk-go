@@ -229,6 +229,8 @@ type Core struct {
 	initMutex       sync.RWMutex
 	callbackID      int64
 	callbackIDMutex sync.Mutex
+
+	coreEvents *CoreEvents // Store reference to CoreEvents for event handler updates
 }
 
 // Start begins a background goroutine that continuously calls RunCallbacks.
@@ -759,4 +761,20 @@ func (rm *RelationshipManager) GetAt(index uint32) (*Relationship, Result) {
 		return nil, Result(res)
 	}
 	return &rel, ResultOk
+}
+
+// SetActivityEvents sets or updates the ActivityEvents handler at runtime.
+func (c *Core) SetActivityEvents(events *ActivityEvents) {
+	if c.coreEvents == nil {
+		c.coreEvents = NewCoreEvents()
+	}
+	c.coreEvents.SetActivityEvents(events)
+}
+
+// SetLobbyEvents sets or updates the LobbyEvents handler at runtime.
+func (c *Core) SetLobbyEvents(events *LobbyEvents) {
+	if c.coreEvents == nil {
+		c.coreEvents = NewCoreEvents()
+	}
+	c.coreEvents.SetLobbyEvents(events)
 }
