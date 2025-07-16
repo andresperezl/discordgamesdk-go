@@ -10,5 +10,7 @@ Remember the project structure is the following:
 - In the root of the project (package discord) you have the more idiomatic Go functions and types that use the core package to invoke the SDK.
 - Only import C in the bindings.go file, any neccessary type conversion to C types must be done via helper methods provided by the bindings.go file itself, keep all the CGO code under the discordcgo package
 - When adding a function ensure the proper methods are added to the wrappers and bindings, then implement the more C like type functions in package core, and then implement the more idiomatic Go functions and types in the package discord (the root of the project)
+- All C memory handling must be done in the bindings.go, not in any other package
 - Always make sure the code can compile after a series of changes
 - Once you are done commit the changes to Git, and disable gpg signing
+- All commit follow coventional commits structure, if possible adding the scope as well

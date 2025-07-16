@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -52,13 +53,15 @@ func main() {
 		SetInstance(true).
 		Build()
 
-	// Set the activity
-	fmt.Println("Setting rich activity...")
-	err = activityClient.SetActivity(activity)
+	// Set the activity using the new context-aware helper
+	fmt.Println("Setting rich activity with context-aware helper...")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = activityClient.SetActivityWithContext(ctx, activity)
 	if err != nil {
-		log.Fatalf("Failed to set activity: %v", err)
+		log.Fatalf("Failed to set activity with context: %v", err)
 	}
-	fmt.Println("✓ Rich activity set successfully")
+	fmt.Println("✓ Rich activity set successfully (with context)")
 
 	// Wait a moment to see the activity
 	time.Sleep(2 * time.Second)

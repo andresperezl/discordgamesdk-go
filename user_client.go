@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"context"
 	"fmt"
 
 	core "github.com/andresperezl/discordctl/core"
@@ -78,6 +79,44 @@ func (uc *UserClient) CurrentUserHasFlag(flag core.UserFlag) (bool, error) {
 	}
 
 	return hasFlag, nil
+}
+
+// GetUserWithContext gets a user by ID, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+//	defer cancel()
+//	user, err := client.User().GetUserWithContext(ctx, userID)
+//	if err != nil {
+//	    log.Fatalf("failed to get user: %v", err)
+//	}
+//	fmt.Printf("Fetched user: %s\n", user.Username)
+//
+// Returns the user or error if the context is cancelled, deadline exceeded, or the fetch fails.
+func (uc *UserClient) GetUserWithContext(ctx context.Context, userID int64) (*core.User, error) {
+	if uc.manager == nil {
+		return nil, fmt.Errorf("user manager not available")
+	}
+	resultChan := make(chan *core.User, 1)
+	errChan := make(chan error, 1)
+
+	uc.manager.GetUser(userID, func(result core.Result, user *core.User) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to get user: %v", result)
+			return
+		}
+		resultChan <- user
+	})
+
+	select {
+	case user := <-resultChan:
+		return user, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 // UserBuilder helps build user-related queries with a fluent interface

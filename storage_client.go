@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"context"
 	"fmt"
 
 	core "github.com/andresperezl/discordctl/core"
@@ -80,6 +81,40 @@ func (sc *StorageClient) WriteAsync(name string, data []byte) <-chan error {
 	return errChan
 }
 
+// WriteWithContext writes data to storage, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+//	defer cancel()
+//	err := client.Storage().WriteWithContext(ctx, "file.txt", []byte("hello"))
+//	if err != nil {
+//	    log.Fatalf("failed to write: %v", err)
+//	}
+//
+// Returns an error if the context is cancelled, deadline exceeded, or the write fails.
+func (sc *StorageClient) WriteWithContext(ctx context.Context, name string, data []byte) error {
+	if sc.manager == nil {
+		return fmt.Errorf("storage manager not available")
+	}
+	errChan := make(chan error, 1)
+
+	sc.manager.WriteAsync(name, data, func(result core.Result) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to write async: %v", result)
+		} else {
+			errChan <- nil
+		}
+	})
+
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // Delete deletes data from storage
 func (sc *StorageClient) Delete(name string) error {
 	if sc.manager == nil {
@@ -138,4 +173,42 @@ func (sc *StorageClient) GetPath() (string, error) {
 		return "", fmt.Errorf("failed to get path: %v", result)
 	}
 	return path, nil
+}
+
+// ReadWithContext reads data from storage, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+//	defer cancel()
+//	data, err := client.Storage().ReadWithContext(ctx, "file.txt")
+//	if err != nil {
+//	    log.Fatalf("failed to read: %v", err)
+//	}
+//	fmt.Printf("Read %d bytes\n", len(data))
+//
+// Returns the data or error if the context is cancelled, deadline exceeded, or the read fails.
+func (sc *StorageClient) ReadWithContext(ctx context.Context, name string) ([]byte, error) {
+	if sc.manager == nil {
+		return nil, fmt.Errorf("storage manager not available")
+	}
+	dataChan := make(chan []byte, 1)
+	errChan := make(chan error, 1)
+
+	sc.manager.ReadAsync(name, func(result core.Result, data []byte) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to read async: %v", result)
+			return
+		}
+		dataChan <- data
+	})
+
+	select {
+	case data := <-dataChan:
+		return data, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
