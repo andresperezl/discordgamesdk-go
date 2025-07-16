@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"context"
 	"fmt"
 	"unsafe"
 
@@ -307,8 +308,159 @@ func (c *LobbyClient) DeleteLobby(lobbyID int64) <-chan error {
 	return errChan
 }
 
+// CreateLobbyWithContext creates a lobby, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+//	defer cancel()
+//	lobby, err := client.Lobby().CreateLobbyWithContext(ctx, transaction)
+//	if err != nil {
+//	    log.Fatalf("failed to create lobby: %v", err)
+//	}
+//	fmt.Printf("Created lobby with ID: %d\n", lobby.ID)
+//
+// Returns the created lobby or error if the context is cancelled, deadline exceeded, or the creation fails.
+func (c *LobbyClient) CreateLobbyWithContext(ctx context.Context, transaction *core.LobbyTransaction) (*core.Lobby, error) {
+	if c.manager == nil {
+		return nil, fmt.Errorf("lobby manager not available")
+	}
+
+	lobbyChan := make(chan *core.Lobby, 1)
+	errChan := make(chan error, 1)
+
+	c.manager.CreateLobby(transaction, func(result core.Result, lobby *core.Lobby) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to create lobby: %v", result)
+			return
+		}
+		lobbyChan <- lobby
+	})
+
+	select {
+	case lobby := <-lobbyChan:
+		return lobby, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// UpdateLobby updates a lobby asynchronously and returns a channel for the result.
+func (c *LobbyClient) UpdateLobby(lobbyID int64, transaction *core.LobbyTransaction) <-chan error {
+	errChan := make(chan error, 1)
+	if c.manager == nil {
+		errChan <- fmt.Errorf("lobby manager not available")
+		close(errChan)
+		return errChan
+	}
+	c.manager.UpdateLobby(lobbyID, transaction, func(result core.Result) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to update lobby: %v", result)
+		} else {
+			errChan <- nil
+		}
+		close(errChan)
+	})
+	return errChan
+}
+
+// UpdateLobbyWithContext updates a lobby, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+//	defer cancel()
+//	err := client.Lobby().UpdateLobbyWithContext(ctx, lobbyID, transaction)
+//	if err != nil {
+//	    log.Fatalf("failed to update lobby: %v", err)
+//	}
+//
+// Returns an error if the context is cancelled, deadline exceeded, or the update fails.
+func (c *LobbyClient) UpdateLobbyWithContext(ctx context.Context, lobbyID int64, transaction *core.LobbyTransaction) error {
+	if c.manager == nil {
+		return fmt.Errorf("lobby manager not available")
+	}
+	errChan := make(chan error, 1)
+	c.manager.UpdateLobby(lobbyID, transaction, func(result core.Result) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to update lobby: %v", result)
+		} else {
+			errChan <- nil
+		}
+	})
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // NOTE: The Discord Game SDK does not provide APIs for lobby metadata value by index, lobby message history, or direct search result access.
 // Methods such as GetLobbyMetadataValueByIndex, GetLobbyMemberMetadataValueByIndex, GetLobbyMessageCount, GetLobbyMessageUserId, GetLobbyMessageData,
 // Search, SearchWithFilter, GetSearchResultCount, and GetSearchResult have been removed because they cannot be implemented with the current SDK.
 //
 // TODO: Methods like SetLobbyMetadata, DeleteLobbyMetadata, SetLobbyMemberMetadata, and DeleteLobbyMemberMetadata should be implemented using the transaction pattern.
+
+// LobbyEventChannels provides channels for key lobby events.
+type LobbyEventChannels struct {
+	MemberJoin   <-chan int64 // userID
+	MemberLeave  <-chan int64 // userID
+	LobbyMessage <-chan LobbyMessageEvent
+}
+
+// LobbyMessageEvent represents a message event in a lobby.
+type LobbyMessageEvent struct {
+	LobbyID int64
+	UserID  int64
+	Data    []byte
+}
+
+// LobbyEventsChannel returns channels for key lobby events (member join/leave, message).
+//
+// Example usage:
+//
+//	events := client.Lobby().LobbyEventsChannel()
+//	go func() {
+//	    for userID := range events.MemberJoin {
+//	        fmt.Printf("User joined: %d\n", userID)
+//	    }
+//	}()
+//	go func() {
+//	    for userID := range events.MemberLeave {
+//	        fmt.Printf("User left: %d\n", userID)
+//	    }
+//	}()
+//	go func() {
+//	    for msg := range events.LobbyMessage {
+//	        fmt.Printf("Message in lobby %d from %d: %s\n", msg.LobbyID, msg.UserID, string(msg.Data))
+//	    }
+//	}()
+func (c *LobbyClient) LobbyEventsChannel() *LobbyEventChannels {
+	memberJoin := make(chan int64, 8)
+	memberLeave := make(chan int64, 8)
+	lobbyMessage := make(chan LobbyMessageEvent, 8)
+
+	if c.core != nil {
+		events := &core.LobbyEvents{
+			OnMemberConnect: func(lobbyID, userID int64) {
+				memberJoin <- userID
+			},
+			OnMemberDisconnect: func(lobbyID, userID int64) {
+				memberLeave <- userID
+			},
+			OnLobbyMessage: func(lobbyID, userID int64, data []byte) {
+				lobbyMessage <- LobbyMessageEvent{LobbyID: lobbyID, UserID: userID, Data: data}
+			},
+		}
+		c.core.SetLobbyEvents(events)
+	}
+
+	return &LobbyEventChannels{
+		MemberJoin:   memberJoin,
+		MemberLeave:  memberLeave,
+		LobbyMessage: lobbyMessage,
+	}
+}
