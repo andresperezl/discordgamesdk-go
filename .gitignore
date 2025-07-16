@@ -31,3 +31,5 @@ examples/bin/
 
 # Discord SDK libraries
 lib/discord_game_sdk.* 
+!.github/
+!.github/workflows/ 

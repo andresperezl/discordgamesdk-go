@@ -28,6 +28,10 @@ See [LICENSE](./LICENSE) for details.
 
 Currently, this project only includes documentation examples and does not have automated tests. Contributions adding real test coverage are highly encouraged to improve code quality and reliability.
 
+## Automated Releases
+
+This project uses [semantic-release](https://semantic-release.gitbook.io/) with GitHub Actions to automatically create v0.x.x tags and GitHub releases based on commit messages. See `.github/workflows/release.yml` for details.
+
 ---
 
 *This project is experimental and was generated as a test of code generation tools. Expect rough edges and review all code before use.* 
