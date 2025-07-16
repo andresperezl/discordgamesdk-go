@@ -3,6 +3,8 @@ package core
 import (
 	"unsafe"
 
+	runtimecgo "runtime/cgo"
+
 	dcgo "github.com/andresperezl/discordctl/discordcgo"
 )
 
@@ -26,13 +28,18 @@ func (l *LobbyManager) CreateLobby(transaction *LobbyTransaction, callback func(
 	}
 
 	var callbackData unsafe.Pointer
+	var handle runtimecgo.Handle
 	if callback != nil {
-		callbackData = unsafe.Pointer(&callback)
+		handle = runtimecgo.NewHandle(callback)
+		callbackData = unsafe.Pointer(&handle)
 	}
 	dcgo.RunOnDispatcherSync(func() any {
 		dcgo.LobbyManagerCreateLobby(l.manager, cTransaction, callbackData, nil)
 		return nil
 	})
+	if callback != nil {
+		handle.Delete()
+	}
 }
 
 // UpdateLobby updates a lobby

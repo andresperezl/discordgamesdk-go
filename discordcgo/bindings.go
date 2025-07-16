@@ -33,8 +33,11 @@ void get_discord_file_stat_filename(struct DiscordFileStat* stat, char* out, int
 import "C"
 import (
 	"runtime"
+	runtimecgo "runtime/cgo"
 	"sync"
 	"unsafe"
+
+	"github.com/andresperezl/discordctl/core"
 )
 
 var dispatcherThreadID uint64
@@ -379,10 +382,37 @@ func LobbyManagerGetLobbyCreateTransaction(manager unsafe.Pointer, transaction u
 }
 
 func LobbyManagerCreateLobby(manager unsafe.Pointer, transaction unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
-	RunOnDispatcherSync(func() any {
-		C.discord_lobby_manager_create_lobby((*C.struct_IDiscordLobbyManager)(manager), (*C.struct_IDiscordLobbyTransaction)(transaction), callbackData, (*[0]byte)(callback))
-		return nil
-	})
+	C.discord_lobby_manager_create_lobby(
+		(*C.struct_IDiscordLobbyManager)(manager),
+		(*C.struct_IDiscordLobbyTransaction)(transaction),
+		callbackData,
+		C.LobbyManagerCreateLobbyCallback,
+	)
+}
+
+//export LobbyManagerCreateLobbyCallback
+func LobbyManagerCreateLobbyCallback(callbackData unsafe.Pointer, result C.enum_EDiscordResult, cLobby *C.struct_DiscordLobby) {
+	if callbackData == nil {
+		return
+	}
+	handle := *(*runtimecgo.Handle)(callbackData)
+	cb, ok := handle.Value().(func(core.Result, *core.Lobby))
+	if !ok {
+		return
+	}
+	var lobby *core.Lobby
+	if cLobby != nil {
+		lobby = &core.Lobby{
+			ID:       int64(cLobby.id),
+			Type:     core.LobbyType(cLobby.typ),
+			OwnerID:  int64(cLobby.owner_id),
+			Secret:   C.GoString(&cLobby.secret[0]),
+			Capacity: uint32(cLobby.capacity),
+			Locked:   bool(cLobby.locked),
+		}
+	}
+	cb(core.Result(result), lobby)
+	handle.Delete()
 }
 
 func LobbyManagerConnectLobby(manager unsafe.Pointer, lobbyID int64, secret unsafe.Pointer, callbackData unsafe.Pointer, callback unsafe.Pointer) {
