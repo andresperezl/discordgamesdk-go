@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"context"
 	"fmt"
 
 	core "github.com/andresperezl/discordctl/core"
@@ -102,4 +103,132 @@ func (oc *OverlayClient) OpenVoiceSettings() <-chan error {
 		close(errChan)
 	})
 	return errChan
+}
+
+// OpenVoiceSettingsWithContext opens the voice settings, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+//	defer cancel()
+//	err := client.Overlay().OpenVoiceSettingsWithContext(ctx)
+//	if err != nil {
+//	    log.Fatalf("failed to open voice settings: %v", err)
+//	}
+//
+// Returns an error if the context is cancelled, deadline exceeded, or the operation fails.
+func (oc *OverlayClient) OpenVoiceSettingsWithContext(ctx context.Context) error {
+	if oc.manager == nil {
+		return fmt.Errorf("overlay manager not available")
+	}
+	errChan := make(chan error, 1)
+	oc.manager.OpenVoiceSettings(func(result core.Result) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to open voice settings: %v", result)
+		} else {
+			errChan <- nil
+		}
+	})
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// SetLockedWithContext sets the overlay locked state, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+//	defer cancel()
+//	err := client.Overlay().SetLockedWithContext(ctx, true)
+//	if err != nil {
+//	    log.Fatalf("failed to set locked: %v", err)
+//	}
+//
+// Returns an error if the context is cancelled, deadline exceeded, or the operation fails.
+func (oc *OverlayClient) SetLockedWithContext(ctx context.Context, locked bool) error {
+	if oc.manager == nil {
+		return fmt.Errorf("overlay manager not available")
+	}
+	errChan := make(chan error, 1)
+	oc.manager.SetLocked(locked, func(result core.Result) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to set locked: %v", result)
+		} else {
+			errChan <- nil
+		}
+	})
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// OpenActivityInviteWithContext opens an activity invite, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+//	defer cancel()
+//	err := client.Overlay().OpenActivityInviteWithContext(ctx, core.ActivityActionTypeJoin)
+//	if err != nil {
+//	    log.Fatalf("failed to open activity invite: %v", err)
+//	}
+//
+// Returns an error if the context is cancelled, deadline exceeded, or the operation fails.
+func (oc *OverlayClient) OpenActivityInviteWithContext(ctx context.Context, actionType core.ActivityActionType) error {
+	if oc.manager == nil {
+		return fmt.Errorf("overlay manager not available")
+	}
+	errChan := make(chan error, 1)
+	oc.manager.OpenActivityInvite(actionType, func(result core.Result) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to open activity invite: %v", result)
+		} else {
+			errChan <- nil
+		}
+	})
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// OpenGuildInviteWithContext opens a guild invite, respecting context cancellation and timeout.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+//	defer cancel()
+//	err := client.Overlay().OpenGuildInviteWithContext(ctx, "inviteCode")
+//	if err != nil {
+//	    log.Fatalf("failed to open guild invite: %v", err)
+//	}
+//
+// Returns an error if the context is cancelled, deadline exceeded, or the operation fails.
+func (oc *OverlayClient) OpenGuildInviteWithContext(ctx context.Context, code string) error {
+	if oc.manager == nil {
+		return fmt.Errorf("overlay manager not available")
+	}
+	errChan := make(chan error, 1)
+	oc.manager.OpenGuildInvite(code, func(result core.Result) {
+		if result != core.ResultOk {
+			errChan <- fmt.Errorf("failed to open guild invite: %v", result)
+		} else {
+			errChan <- nil
+		}
+	})
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
