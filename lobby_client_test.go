@@ -41,3 +41,53 @@ func ExampleLobbyClient_UpdateLobbyWithContext() {
 	}
 	// No Output: (documentation only)
 }
+
+// ExampleLobbyClient_LobbyEventsChannel demonstrates how to use LobbyEventsChannel to receive all lobby event streams.
+// This example is for documentation only and requires a real, initialized LobbyClient.
+func ExampleLobbyClient_LobbyEventsChannel() {
+	var lobbyClient *LobbyClient // Assume this is properly initialized
+
+	events := lobbyClient.LobbyEventsChannel()
+
+	go func() {
+		for userID := range events.MemberJoin {
+			log.Printf("User joined: %d", userID)
+		}
+	}()
+	go func() {
+		for userID := range events.MemberLeave {
+			log.Printf("User left: %d", userID)
+		}
+	}()
+	go func() {
+		for msg := range events.LobbyMessage {
+			log.Printf("Message in lobby %d from %d: %s", msg.LobbyID, msg.UserID, string(msg.Data))
+		}
+	}()
+	go func() {
+		for lobbyID := range events.LobbyUpdate {
+			log.Printf("Lobby updated: %d", lobbyID)
+		}
+	}()
+	go func() {
+		for del := range events.LobbyDelete {
+			log.Printf("Lobby deleted: %d (reason: %d)", del.LobbyID, del.Reason)
+		}
+	}()
+	go func() {
+		for upd := range events.MemberUpdate {
+			log.Printf("Member updated: lobby %d user %d", upd.LobbyID, upd.UserID)
+		}
+	}()
+	go func() {
+		for spk := range events.Speaking {
+			log.Printf("Speaking: lobby %d user %d speaking=%v", spk.LobbyID, spk.UserID, spk.Speaking)
+		}
+	}()
+	go func() {
+		for net := range events.NetworkMessage {
+			log.Printf("Network message: lobby %d user %d channel %d data %v", net.LobbyID, net.UserID, net.ChannelID, net.Data)
+		}
+	}()
+	// No Output: (documentation only)
+}
